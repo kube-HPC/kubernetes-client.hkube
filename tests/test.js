@@ -1,29 +1,50 @@
 const { expect } = require('chai');
+const mockery = require('mockery');
 const sinon = require('sinon');
-const { Client, utils } = require('../index');
-const { findContainer, applyImage, applyResourceRequests, applyEnvToContainer, nodeSelectorToNodeAffinity, applyNodeAffinity, applyNodeSelector, applyVolumes, applyVolumeMounts } = utils;
-const deploymentTemplate = require('./mocks/deploymentTemplate');
-const jobTemplate = require('./mocks/jobTemplate');
+const deploymentTemplate = require('./stubs/deploymentTemplate');
+const jobTemplate = require('./stubs/jobTemplate');
+const slimJobTemplate = require('./stubs/slim-job-template');
+const kubernetesMockClient = require('./mocks/kubernetesClient.mock');
 
 const labelSelector = 'type=worker';
 const deploymentName = 'worker';
 const jobName = 'worker';
 const podName = 'worker';
 const containerName = 'worker';
-let client;
+let client, Client, utils;
 
 describe('bootstrap', () => {
     before(async () => {
+        mockery.enable({
+            warnOnReplace: false,
+            warnOnUnregistered: false,
+            useCleanCache: false
+        });
+        mockery.registerMock('kubernetes-client', kubernetesMockClient);
+        const index = require('../index');
+        Client = index.Client;
+        utils = index.utils;
         client = new Client();
-    });
-    after(() => {
-
     });
     describe('Client', () => {
         describe('Client', () => {
             it('should init without error', async () => {
                 const config = {
                     isLocal: false,
+                    namespace: 'default'
+                };
+                const clientK8s = new Client(config);
+                expect(clientK8s).to.have.property('configMaps');
+                expect(clientK8s).to.have.property('deployments');
+                expect(clientK8s).to.have.property('jobs');
+                expect(clientK8s).to.have.property('logs');
+                expect(clientK8s).to.have.property('nodes');
+                expect(clientK8s).to.have.property('pods');
+                expect(clientK8s).to.have.property('versions');
+            });
+            it('should init without error', async () => {
+                const config = {
+                    isLocal: true,
                     namespace: 'default'
                 };
                 const clientK8s = new Client(config);
@@ -111,11 +132,11 @@ describe('bootstrap', () => {
         describe('findContainer', () => {
             it('should throw unable to find container', async () => {
                 const container = 'no_such';
-                expect(() => findContainer(jobTemplate, container)).to.throw(`unable to find container ${container}`);
+                expect(() => utils.findContainer(jobTemplate, container)).to.throw(`unable to find container ${container}`);
             });
             it('should find container', async () => {
                 const container = 'worker';
-                const res = findContainer(jobTemplate, container);
+                const res = utils.findContainer(jobTemplate, container);
                 expect(res).to.have.property('name');
                 expect(res).to.have.property('image');
             });
@@ -124,13 +145,13 @@ describe('bootstrap', () => {
             it('should init without error', async () => {
                 const image = null;
                 const container = 'worker';
-                const res = applyImage(jobTemplate, image, container);
+                const res = utils.applyImage(jobTemplate, image, container);
                 expect(res.spec.template.spec.containers[0].image).to.equal('hkube/worker:latest');
             });
             it('should init without error', async () => {
                 const image = 'hkube/worker';
                 const container = 'worker';
-                const res = applyImage(jobTemplate, image, container);
+                const res = utils.applyImage(jobTemplate, image, container);
                 expect(res).to.nested.include({ 'spec.template.spec.containers[0].image': image });
             });
         });
@@ -138,7 +159,7 @@ describe('bootstrap', () => {
             it('should init without error', async () => {
                 const container = 'worker';
                 const resources = null;
-                const res = applyResourceRequests(jobTemplate, resources, container);
+                const res = utils.applyResourceRequests(jobTemplate, resources, container);
                 expect(res.spec.template.spec.containers[0]).to.not.have.property('resources');
             });
             it('should init without error', async () => {
@@ -153,48 +174,57 @@ describe('bootstrap', () => {
                         memory: '200M'
                     }
                 };
-                const res = applyResourceRequests(jobTemplate, resources, container);
+                const res = utils.applyResourceRequests(jobTemplate, resources, container);
                 expect(res.spec.template.spec.containers[0].resources).to.eql(resources);
             });
         });
         describe('applyEnvToContainer', () => {
             it('should add env to spec', () => {
                 const container = 'worker';
+                const res = utils.applyEnvToContainer(slimJobTemplate, container, { env1: 'value1' });
+                expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(1);
+            });
+            it('should add env to spec', () => {
+                const container = 'worker';
                 const envLength = jobTemplate.spec.template.spec.containers[0].env.length;
-                const res = applyEnvToContainer(jobTemplate, container, null);
+                const res = utils.applyEnvToContainer(jobTemplate, container, null);
                 expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(envLength);
             });
             it('should add env to spec', () => {
                 const container = 'worker';
                 const envLength = jobTemplate.spec.template.spec.containers[0].env.length;
-                const res = applyEnvToContainer(jobTemplate, container, { env1: 'value1' });
+                const res = utils.applyEnvToContainer(jobTemplate, container, { env1: 'value1' });
                 expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(envLength + 1);
                 expect(res.spec.template.spec.containers[0].env).to.deep.include({ name: 'env1', value: 'value1' });
             });
             it('should replace env in spec', () => {
                 const container = 'worker';
                 const envLength = jobTemplate.spec.template.spec.containers[0].env.length;
-                const res = applyEnvToContainer(jobTemplate, container, { NODE_ENV: 'newEnv' });
+                const res = utils.applyEnvToContainer(jobTemplate, container, { NODE_ENV: 'newEnv' });
                 expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(envLength);
                 expect(res.spec.template.spec.containers[0].env).to.deep.include({ name: 'NODE_ENV', value: 'newEnv' });
             });
             it('should remove env in spec', () => {
                 const container = 'worker';
                 const envLength = jobTemplate.spec.template.spec.containers[0].env.length;
-                const res = applyEnvToContainer(jobTemplate, container, { NODE_ENV: null });
+                const res = utils.applyEnvToContainer(jobTemplate, container, { NODE_ENV: null });
                 expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(envLength - 1);
                 expect(res.spec.template.spec.containers[0].env).to.not.deep.include({ name: 'NODE_ENV', value: 'kube' });
             });
             it('combine', () => {
                 const container = 'worker';
                 const envLength = jobTemplate.spec.template.spec.containers[0].env.length;
-                const res = applyEnvToContainer(jobTemplate, container, { NODE_ENV: null, OTHER_ENV: 'new', newEnv: 3 });
+                const res = utils.applyEnvToContainer(jobTemplate, container, { NODE_ENV: null, OTHER_ENV: 'new', newEnv: 3 });
                 expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(envLength + 1);
                 expect(res.spec.template.spec.containers[0].env).to.not.deep.include({ name: 'NODE_ENV', value: 'kube' });
                 expect(res.spec.template.spec.containers[0].env).to.deep.include({ name: 'OTHER_ENV', value: 'new' });
             });
         });
         describe('nodeSelectorToNodeAffinity', () => {
+            it('should init without error', async () => {
+                const res = utils.nodeSelectorToNodeAffinity();
+                expect(res).to.be.null;
+            });
             it('should init without error', async () => {
                 const nodeSelector = {
                     disktype: 'ssd-1',
@@ -214,17 +244,17 @@ describe('bootstrap', () => {
                         }]
                     }]
                 };
-                const res = nodeSelectorToNodeAffinity(nodeSelector);
+                const res = utils.nodeSelectorToNodeAffinity(nodeSelector);
                 expect(res).to.eql(nodeAffinity);
             });
         });
         describe('applyNodeAffinity', () => {
             it('should not create node affinity with null param', () => {
-                const res = applyNodeAffinity(jobTemplate, null);
+                const res = utils.applyNodeAffinity(jobTemplate, null);
                 expect(res.spec.template.spec.affinity).to.be.undefined;
             });
             it('should not create node affinity with empty array', () => {
-                const res = applyNodeAffinity(jobTemplate, []);
+                const res = utils.applyNodeAffinity(jobTemplate, []);
                 expect(res.spec.template.spec.affinity).to.be.undefined;
             });
             it('should create node affinity with multiple matchExpressions', () => {
@@ -242,7 +272,7 @@ describe('bootstrap', () => {
                         }]
                     }]
                 };
-                const res = applyNodeAffinity(jobTemplate, nodeAffinity);
+                const res = utils.applyNodeAffinity(jobTemplate, nodeAffinity);
                 const terms = res.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms;
                 expect(terms).to.have.lengthOf(1);
                 expect(terms[0].matchExpressions).to.have.lengthOf(2);
@@ -264,7 +294,7 @@ describe('bootstrap', () => {
                         }]
                     }]
                 };
-                const res = applyNodeAffinity(jobTemplate, nodeAffinity);
+                const res = utils.applyNodeAffinity(jobTemplate, nodeAffinity);
                 const terms = res.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms;
                 expect(terms).to.have.lengthOf(2);
                 expect(terms[0].matchExpressions).to.have.lengthOf(1);
@@ -289,7 +319,7 @@ describe('bootstrap', () => {
                         }]
                     }]
                 };
-                const res = nodeSelectorToNodeAffinity(nodeSelector);
+                const res = utils.nodeSelectorToNodeAffinity(nodeSelector);
                 expect(res).to.eql(nodeAffinity);
             });
             it('should convert nodeSelector To k8s like NodeAffinity', () => {
@@ -297,7 +327,7 @@ describe('bootstrap', () => {
                     disktype: 'ssd-1',
                     gpu: 'gpu-1'
                 };
-                const res = applyNodeSelector(jobTemplate, nodeSelector);
+                const res = utils.applyNodeSelector(jobTemplate, nodeSelector);
                 const terms = res.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution.nodeSelectorTerms;
                 expect(terms).to.have.lengthOf(1);
                 expect(terms[0].matchExpressions).to.have.lengthOf(Object.keys(nodeSelector).length);
@@ -323,30 +353,35 @@ describe('bootstrap', () => {
                         }]
                     }]
                 };
-                const res = applyNodeSelector(jobTemplate, nodeSelector);
+                const res = utils.applyNodeSelector(jobTemplate, nodeSelector);
                 const selector = res.spec.template.spec.affinity.nodeAffinity.requiredDuringSchedulingIgnoredDuringExecution;
                 expect(selector).to.eql(nodeAffinity);
             });
         });
         describe('applyVolumes', () => {
             it('should add volume to spec', () => {
+                const newVolume = { name: 'storage-volume', persistentVolumeClaim: { claimName: 'hkube-storage-pvc' } };
+                const res = utils.applyVolumes(slimJobTemplate, newVolume);
+                expect(res.spec.template.spec.volumes).to.have.lengthOf(1);
+            });
+            it('should add volume to spec', () => {
                 const envLength = jobTemplate.spec.template.spec.volumes.length;
-                const res = applyVolumes(jobTemplate, null);
+                const res = utils.applyVolumes(jobTemplate, null);
                 expect(res.spec.template.spec.volumes).to.have.lengthOf(envLength);
             });
             it('should add volume to spec', () => {
                 const envLength = jobTemplate.spec.template.spec.volumes.length;
                 const newVolume = { name: 'storage-volume', persistentVolumeClaim: { claimName: 'hkube-storage-pvc' } };
-                const res = applyVolumes(jobTemplate, newVolume);
+                const res = utils.applyVolumes(jobTemplate, newVolume);
                 expect(res.spec.template.spec.volumes).to.have.lengthOf(envLength + 1);
                 expect(res.spec.template.spec.volumes).to.deep.include(newVolume);
             });
             it('should replace volume in spec', () => {
                 const volume = { name: 'storage-volume', persistentVolumeClaim: { claimName: 'hkube-storage-pvc1' } };
                 const newVolume = { name: 'storage-volume', persistentVolumeClaim: { claimName: 'hkube-storage-pvc2' } };
-                const res = applyVolumes(jobTemplate, volume);
+                const res = utils.applyVolumes(jobTemplate, volume);
                 const envLength = res.spec.template.spec.volumes.length;
-                const resNew = applyVolumes(res, newVolume);
+                const resNew = utils.applyVolumes(res, newVolume);
                 expect(resNew.spec.template.spec.volumes).to.have.lengthOf(envLength);
                 expect(resNew.spec.template.spec.volumes).to.deep.include(newVolume);
                 expect(resNew.spec.template.spec.volumes).to.not.deep.include(volume);
@@ -355,9 +390,9 @@ describe('bootstrap', () => {
                 const volume = { name: 'storage-volume', persistentVolumeClaim: { claimName: 'hkube-storage-pvc1' } };
                 const updateVolume = { name: 'storage-volume', persistentVolumeClaim: { claimName: 'hkube-storage-pvc2' } };
                 const newVolume = { name: 'test', persistentVolumeClaim: { claimName: 'hkube-storage-pvc3' } };
-                const res = applyVolumes(jobTemplate, volume);
-                const updateRes = applyVolumes(res, updateVolume);
-                const resNew = applyVolumes(updateRes, newVolume);
+                const res = utils.applyVolumes(jobTemplate, volume);
+                const updateRes = utils.applyVolumes(res, updateVolume);
+                const resNew = utils.applyVolumes(updateRes, newVolume);
                 expect(resNew.spec.template.spec.volumes).to.deep.include(newVolume);
                 expect(resNew.spec.template.spec.volumes).to.deep.include(updateVolume);
                 expect(resNew.spec.template.spec.volumes).to.not.deep.include(volume);
@@ -366,15 +401,22 @@ describe('bootstrap', () => {
         describe('applyVolumeMounts', () => {
             it('should add volumeMount to spec', () => {
                 const container = 'worker';
+                const newVolumeMounts = { name: 'storage-volume', mountPath: '/hkubedata' };
+                const res = utils.applyVolumeMounts(slimJobTemplate, container, newVolumeMounts);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(1);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.deep.include(newVolumeMounts);
+            });
+            it('should add volumeMount to spec', () => {
+                const container = 'worker';
                 const envLength = jobTemplate.spec.template.spec.containers[0].volumeMounts.length;
-                const res = applyVolumeMounts(jobTemplate, container, null);
+                const res = utils.applyVolumeMounts(jobTemplate, container, null);
                 expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(envLength);
             });
             it('should add volumeMount to spec', () => {
                 const container = 'worker';
                 const envLength = jobTemplate.spec.template.spec.containers[0].volumeMounts.length;
                 const newVolumeMounts = { name: 'storage-volume', mountPath: '/hkubedata' };
-                const res = applyVolumeMounts(jobTemplate, container, newVolumeMounts);
+                const res = utils.applyVolumeMounts(jobTemplate, container, newVolumeMounts);
                 expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(envLength + 1);
                 expect(res.spec.template.spec.containers[0].volumeMounts).to.deep.include(newVolumeMounts);
             });
@@ -382,9 +424,9 @@ describe('bootstrap', () => {
                 const container = 'worker';
                 const volumeMounts = { name: 'storage-volume', mountPath: '/hkubedata1' };
                 const newVolumeMounts = { name: 'storage-volume', mountPath: '/hkubedata2' };
-                const res = applyVolumeMounts(jobTemplate, container, volumeMounts);
+                const res = utils.applyVolumeMounts(jobTemplate, container, volumeMounts);
                 const envLength = res.spec.template.spec.containers[0].volumeMounts.length;
-                const resNew = applyVolumeMounts(res, container, newVolumeMounts);
+                const resNew = utils.applyVolumeMounts(res, container, newVolumeMounts);
                 expect(resNew.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(envLength);
                 expect(resNew.spec.template.spec.containers[0].volumeMounts).to.deep.include(newVolumeMounts);
                 expect(resNew.spec.template.spec.containers[0].volumeMounts).to.not.deep.include(volumeMounts);
