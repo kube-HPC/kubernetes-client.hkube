@@ -4,68 +4,75 @@ const podsBody = pods;
 
 class MockClient {
     constructor() {
-        this.shouldThrow = false;
         const jobs = (jobName) => ({
             delete: () => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve({ deleted: jobName })
             },
             get: ({ qs }) => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve({ get: { qs } })
 
             },
             post: ({ body }) => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve({ body })
             },
             patch: ({ body }) => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve({ body })
             }
         });
         jobs.post = ({ body }) => {
-            if (this.shouldThrow) {
-                throw new Error();
-            }
             return Promise.resolve({ body })
         }
         const deployments = (deploymentName) => ({
             delete: () => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve({ deleted: deploymentName })
             },
             get: ({ qs }) => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve({ get: { qs } })
 
             },
             patch: ({ body }) => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve({ body })
             }
         });
         deployments.post = ({ body }) => {
-            if (this.shouldThrow) {
-                throw new Error();
+            return Promise.resolve({ body })
+        };
+        const services = (servicesName) => ({
+            delete: () => {
+                return Promise.resolve({ deleted: servicesName })
+            },
+            get: ({ qs }) => {
+                return Promise.resolve({ get: { qs } })
+
+            },
+            patch: ({ body }) => {
+                return Promise.resolve({ body })
             }
+        });
+        services.post = ({ body }) => {
+            return Promise.resolve({ body })
+        };
+        const ingresses = (servicesName) => ({
+            delete: () => {
+                return Promise.resolve({ deleted: servicesName })
+            },
+            get: ({ qs }) => {
+                return Promise.resolve({ get: { qs } })
+
+            },
+            patch: ({ body }) => {
+                return Promise.resolve({ body })
+            }
+        });
+        ingresses.post = ({ body }) => {
             return Promise.resolve({ body })
         };
         this.apis = {
+            v1: {
+                namespaces: () => ({
+                    services
+                })
+            },
             batch: {
                 v1: {
                     namespaces: () => ({
@@ -80,29 +87,27 @@ class MockClient {
                         deployments
                     })
                 }
+            },
+            extensions: {
+                v1beta: {
+                    namespaces: () => ({
+                        ingresses
+                    })
+                }
             }
         };
         const pods = (jobName) => ({
             get: ({ qs } = {}) => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve({ getPod: { qs }, body: podsBody.body })
             },
             log: {
                 get: ({ qs } = {}) => {
-                    if (this.shouldThrow) {
-                        throw new Error();
-                    }
                     return Promise.resolve({ getPod: { qs }, body: podsBody.body })
                 }
             }
         });
         const configmaps = (name) => ({
             get: () => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve({
                     body: {
                         data: {
@@ -116,9 +121,6 @@ class MockClient {
         });
         const nodes = {
             get: () => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve({
                     get: 'nodes',
                     body: nodesBody.body
@@ -127,9 +129,6 @@ class MockClient {
         };
         this.version = {
             get: () => {
-                if (this.shouldThrow) {
-                    throw new Error();
-                }
                 return Promise.resolve()
             }
         };

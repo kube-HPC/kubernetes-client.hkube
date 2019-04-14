@@ -85,6 +85,24 @@ describe('bootstrap', () => {
 
             });
         });
+        describe('Ingresses', () => {
+            it('should get', async () => {
+                const res = await client.ingresses.get({ labelSelector });
+
+            });
+            it('should create', async () => {
+                const res = await client.ingresses.create({ spec: deploymentTemplate });
+
+            });
+            it('should update', async () => {
+                const res = await client.ingresses.update({ deploymentName, spec: deploymentTemplate });
+
+            });
+            it('should delete', async () => {
+                const res = await client.ingresses.delete({ deploymentName });
+
+            });
+        });
         describe('Jobs', () => {
             it('should get', async () => {
                 const res = await client.jobs.get({ labelSelector });
@@ -118,6 +136,24 @@ describe('bootstrap', () => {
         describe('Pods', () => {
             it('should get', async () => {
                 const res = await client.pods.get({ podName, labelSelector });
+
+            });
+        });
+        describe('Services', () => {
+            it('should get', async () => {
+                const res = await client.services.get({ labelSelector });
+
+            });
+            it('should create', async () => {
+                const res = await client.services.create({ spec: deploymentTemplate });
+
+            });
+            it('should update', async () => {
+                const res = await client.services.update({ deploymentName, spec: deploymentTemplate });
+
+            });
+            it('should delete', async () => {
+                const res = await client.services.delete({ deploymentName });
 
             });
         });
