@@ -55,9 +55,6 @@ describe('KubernetesClient', () => {
     describe('Client', () => {
         describe('Client', () => {
             it('should create new Client with isLocal:false', async () => {
-                const config = {
-                    isLocal: false
-                };
                 const clientK8s = new Client({ isLocal: false, kubeconfig });
                 expect(clientK8s).to.have.property('configMaps');
                 expect(clientK8s).to.have.property('deployments');
@@ -130,10 +127,16 @@ describe('KubernetesClient', () => {
             it('should get', async () => {
                 const res = await client.nodes.get({ labelSelector });
             });
+            it('should get all', async () => {
+                const res = await client.nodes.all();
+            });
         });
         describe('Pods', () => {
             it('should get', async () => {
                 const res = await client.pods.get({ podName, labelSelector });
+            });
+            it('should get all', async () => {
+                const res = await client.pods.all();
             });
         });
         describe('Services', () => {
