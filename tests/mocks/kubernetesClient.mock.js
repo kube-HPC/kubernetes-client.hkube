@@ -111,9 +111,9 @@ class MockClient {
                 return Promise.resolve({
                     body: {
                         data: {
-                            'versions.json': JSON.stringify({ name, versions: [] }),
-                            'registry.json': JSON.stringify({ name, versions: [] }),
-                            'clusterOptions.json': JSON.stringify({ name, versions: [] }),
+                            'versions.json': JSON.stringify({ name, versions: [{ project: 'worker', tag: 'v2.1.0' }] }),
+                            'registry.json': JSON.stringify('cloud.docker.com'),
+                            'clusterOptions.json': JSON.stringify({ useNodeSelector: true }),
                         }
                     }
                 })

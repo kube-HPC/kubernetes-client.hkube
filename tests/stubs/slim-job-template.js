@@ -17,11 +17,11 @@ const slimJobTemplate = {
                 containers: [
                     {
                         name: 'worker',
-                        image: 'hkube/worker:latest'
+                        image: 'hkube/worker'
                     },
                     {
                         name: 'algorunner',
-                        image: 'hkube/algorunner:latest'
+                        image: 'hkube/algorunner'
                     }
                 ]
             }

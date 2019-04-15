@@ -13,7 +13,7 @@ const podName = 'worker';
 const containerName = 'worker';
 let client, Client, utils;
 
-describe('bootstrap', () => {
+describe('KubernetesClient', () => {
     before(async () => {
         mockery.enable({
             warnOnReplace: false,
@@ -28,7 +28,7 @@ describe('bootstrap', () => {
     });
     describe('Client', () => {
         describe('Client', () => {
-            it('should init without error', async () => {
+            it('should create new Client with isLocal:false', async () => {
                 const config = {
                     isLocal: false,
                     namespace: 'default'
@@ -42,7 +42,7 @@ describe('bootstrap', () => {
                 expect(clientK8s).to.have.property('pods');
                 expect(clientK8s).to.have.property('versions');
             });
-            it('should init without error', async () => {
+            it('should create new Client with isLocal:true', async () => {
                 const config = {
                     isLocal: true,
                     namespace: 'default'
@@ -58,113 +58,95 @@ describe('bootstrap', () => {
             });
         });
         describe('ConfigMaps', () => {
-            it('should init without error', async () => {
+            it('should get configMaps', async () => {
                 const res = await client.configMaps.get({ name: 'hkube-versions' });
-
             });
-            it('should init without error', async () => {
+            it('should extractConfigMap', async () => {
                 const res = await client.configMaps.get({ name: 'hkube-versions' });
                 const configMap = client.configMaps.extractConfigMap(res);
+                expect(configMap).to.have.property('versions');
+                expect(configMap).to.have.property('registry');
+                expect(configMap).to.have.property('clusterOptions');
             });
         });
         describe('Deployments', () => {
             it('should get', async () => {
                 const res = await client.deployments.get({ labelSelector });
-
             });
             it('should create', async () => {
                 const res = await client.deployments.create({ spec: deploymentTemplate });
-
             });
             it('should update', async () => {
                 const res = await client.deployments.update({ deploymentName, spec: deploymentTemplate });
-
             });
             it('should delete', async () => {
                 const res = await client.deployments.delete({ deploymentName });
-
             });
         });
         describe('Ingresses', () => {
             it('should get', async () => {
                 const res = await client.ingresses.get({ labelSelector });
-
             });
             it('should create', async () => {
                 const res = await client.ingresses.create({ spec: deploymentTemplate });
-
             });
             it('should update', async () => {
                 const res = await client.ingresses.update({ deploymentName, spec: deploymentTemplate });
-
             });
             it('should delete', async () => {
                 const res = await client.ingresses.delete({ deploymentName });
-
             });
         });
         describe('Jobs', () => {
             it('should get', async () => {
                 const res = await client.jobs.get({ labelSelector });
-
             });
             it('should create', async () => {
                 const res = await client.jobs.create({ spec: jobTemplate });
-
             });
             it('should update', async () => {
                 const res = await client.jobs.update({ jobName, spec: jobTemplate });
-
             });
             it('should delete', async () => {
                 const res = await client.jobs.delete({ jobName });
-
             });
         });
         describe('Logs', () => {
             it('should get', async () => {
                 const res = await client.logs.get({ podName, containerName });
-
             });
         });
         describe('Nodes', () => {
             it('should get', async () => {
                 const res = await client.nodes.get({ labelSelector });
-
             });
         });
         describe('Pods', () => {
             it('should get', async () => {
                 const res = await client.pods.get({ podName, labelSelector });
-
             });
         });
         describe('Services', () => {
             it('should get', async () => {
                 const res = await client.services.get({ labelSelector });
-
             });
             it('should create', async () => {
                 const res = await client.services.create({ spec: deploymentTemplate });
-
             });
             it('should update', async () => {
                 const res = await client.services.update({ deploymentName, spec: deploymentTemplate });
-
             });
             it('should delete', async () => {
                 const res = await client.services.delete({ deploymentName });
-
             });
         });
         describe('Versions', () => {
             it('should get', async () => {
                 const res = await client.versions.get();
-                expect(client).to.have.property('configMaps');
             });
         });
     });
-    describe('utils', () => {
+    describe('Utils', () => {
         describe('findContainer', () => {
             it('should throw unable to find container', async () => {
                 const container = 'no_such';
@@ -177,8 +159,74 @@ describe('bootstrap', () => {
                 expect(res).to.have.property('image');
             });
         });
+        describe('parseImageName', () => {
+            it('should parseImageName with null', async () => {
+                const image = '';
+                const res = utils.parseImageName(image);
+                expect(res).to.be.null;
+            });
+            it('should createImage with library', async () => {
+                const image = 'worker';
+                const res = utils.parseImageName(image);
+                expect(res).to.have.property('registry');
+                expect(res).to.have.property('namespace');
+                expect(res).to.have.property('repository');
+                expect(res).to.have.property('tag');
+                expect(res).to.have.property('name');
+                expect(res).to.have.property('fullname');
+                expect(res.fullname).to.equal('library/worker:latest');
+            });
+            it('should createImage with tag', async () => {
+                const image = 'hkube/worker:v2.1.0';
+                const res = utils.parseImageName(image);
+                expect(res).to.have.property('registry');
+                expect(res).to.have.property('namespace');
+                expect(res).to.have.property('repository');
+                expect(res).to.have.property('tag');
+                expect(res).to.have.property('name');
+                expect(res).to.have.property('fullname');
+                expect(res.tag).to.equal('v2.1.0');
+            });
+            it('should createImage with tag', async () => {
+                const image = 'cloud.docker.com/hkube/worker:v2.1.0';
+                const res = utils.parseImageName(image);
+                expect(res).to.have.property('registry');
+                expect(res).to.have.property('namespace');
+                expect(res).to.have.property('repository');
+                expect(res).to.have.property('tag');
+                expect(res).to.have.property('name');
+                expect(res).to.have.property('fullname');
+                expect(res.registry).to.equal('cloud.docker.com');
+            });
+        });
+        describe('createImage', () => {
+            it('should createImage with tag', async () => {
+                const container = 'worker';
+                const res = utils.createImage(slimJobTemplate, container);
+                expect(res).to.equal('hkube/worker');
+            });
+            it('should createImage with tag', async () => {
+                const container = 'worker';
+                const res = utils.createImage(jobTemplate, container);
+                expect(res).to.equal('hkube/worker:latest');
+            });
+            it('should createImage with tag', async () => {
+                const container = 'worker';
+                const configMapRes = await client.configMaps.get({ name: 'hkube-versions' });
+                const configMap = client.configMaps.extractConfigMap(configMapRes);
+                const res = utils.createImage(slimJobTemplate, container, configMap.versions);
+                expect(res).to.equal('hkube/worker:v2.1.0');
+            });
+            it('should createImage with tag', async () => {
+                const container = 'worker';
+                const configMapRes = await client.configMaps.get({ name: 'hkube-versions' });
+                const configMap = client.configMaps.extractConfigMap(configMapRes);
+                const res = utils.createImage(slimJobTemplate, container, configMap.versions, { registry: configMap.registry });
+                expect(res).to.equal('cloud.docker.com/hkube/worker:v2.1.0');
+            });
+        });
         describe('applyImage', () => {
-            it('should init without error', async () => {
+            it('should applyImage', async () => {
                 const image = null;
                 const container = 'worker';
                 const res = utils.applyImage(jobTemplate, image, container);
