@@ -23,18 +23,19 @@
   "author": "Nassi Harel",
   "license": "MIT",
   "dependencies": {
-    "kubernetes-client": "^6.4.0",
+    "kubernetes-client": "^6.12.1",
     "lodash.clonedeep": "^4.5.0"
   },
   "devDependencies": {
+    "body-parser": "^1.18.3",
     "chai": "^4.2.0",
     "coveralls": "^3.0.3",
     "eslint": "^5.16.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-plugin-chai-friendly": "^0.4.1",
     "eslint-plugin-import": "^2.16.0",
+    "express": "^4.16.4",
     "mocha": "^6.0.2",
-    "mockery": "^2.1.0",
     "nyc": "^13.3.0",
     "pre-commit": "^1.2.2",
     "sinon": "^7.3.1"

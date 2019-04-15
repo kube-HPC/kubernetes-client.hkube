@@ -1,51 +1,62 @@
 const { expect } = require('chai');
-const mockery = require('mockery');
-const sinon = require('sinon');
 const deploymentTemplate = require('./stubs/deploymentTemplate');
 const jobTemplate = require('./stubs/jobTemplate');
 const slimJobTemplate = require('./stubs/slim-job-template');
-const kubernetesMockClient = require('./mocks/kubernetesClient.mock');
+const kubernetesServerMock = require('./mocks/kubernetes-server.mock');
 
-const labelSelector = 'type=worker';
+const labelSelector = 'group=hkube';
 const deploymentName = 'worker';
 const jobName = 'worker';
 const podName = 'worker';
 const containerName = 'worker';
 let client, Client, utils;
 
+const configMapRes = {
+    body: {
+        data: {
+            'versions.json': JSON.stringify({ name: 'hkube-versions', versions: [{ project: 'worker', tag: 'v2.1.0' }] }),
+            'registry.json': JSON.stringify('cloud.docker.com'),
+            'clusterOptions.json': JSON.stringify({ useNodeSelector: true }),
+        }
+    }
+}
+
 describe('KubernetesClient', () => {
     before(async () => {
-        mockery.enable({
-            warnOnReplace: false,
-            warnOnUnregistered: false,
-            useCleanCache: false
-        });
-        mockery.registerMock('kubernetes-client', kubernetesMockClient);
         const index = require('../index');
         Client = index.Client;
         utils = index.utils;
-        client = new Client();
+
+        const kubeconfig = {
+            apiVersion: 'v1',
+            kind: 'Config',
+            'current-context': 'dev',
+            clusters: [{
+                name: 'dev',
+                cluster: {
+                    server: "http://127.0.0.1:9000/api/kube"
+                }
+            }],
+            contexts: [{
+                name: 'dev',
+                context: {
+                    cluster: 'dev',
+                    user: 'dev-admin'
+                }
+            }],
+            users: [{
+                name: 'default-admin',
+                user: {}
+            }]
+        }
+        client = new Client({ isLocal: false, kubeconfig });
+        await kubernetesServerMock.start({ port: 9000 });
     });
     describe('Client', () => {
         describe('Client', () => {
             it('should create new Client with isLocal:false', async () => {
                 const config = {
-                    isLocal: false,
-                    namespace: 'default'
-                };
-                const clientK8s = new Client(config);
-                expect(clientK8s).to.have.property('configMaps');
-                expect(clientK8s).to.have.property('deployments');
-                expect(clientK8s).to.have.property('jobs');
-                expect(clientK8s).to.have.property('logs');
-                expect(clientK8s).to.have.property('nodes');
-                expect(clientK8s).to.have.property('pods');
-                expect(clientK8s).to.have.property('versions');
-            });
-            it('should create new Client with isLocal:true', async () => {
-                const config = {
-                    isLocal: true,
-                    namespace: 'default'
+                    isLocal: false
                 };
                 const clientK8s = new Client(config);
                 expect(clientK8s).to.have.property('configMaps');
@@ -62,8 +73,7 @@ describe('KubernetesClient', () => {
                 const res = await client.configMaps.get({ name: 'hkube-versions' });
             });
             it('should extractConfigMap', async () => {
-                const res = await client.configMaps.get({ name: 'hkube-versions' });
-                const configMap = client.configMaps.extractConfigMap(res);
+                const configMap = client.configMaps.extractConfigMap(configMapRes);
                 expect(configMap).to.have.property('versions');
                 expect(configMap).to.have.property('registry');
                 expect(configMap).to.have.property('clusterOptions');
@@ -165,7 +175,7 @@ describe('KubernetesClient', () => {
                 const res = utils.parseImageName(image);
                 expect(res).to.be.null;
             });
-            it('should createImage with library', async () => {
+            it('should parseImageName with library', async () => {
                 const image = 'worker';
                 const res = utils.parseImageName(image);
                 expect(res).to.have.property('registry');
@@ -176,7 +186,7 @@ describe('KubernetesClient', () => {
                 expect(res).to.have.property('fullname');
                 expect(res.fullname).to.equal('library/worker:latest');
             });
-            it('should createImage with tag', async () => {
+            it('should parseImageName with tag', async () => {
                 const image = 'hkube/worker:v2.1.0';
                 const res = utils.parseImageName(image);
                 expect(res).to.have.property('registry');
@@ -187,7 +197,7 @@ describe('KubernetesClient', () => {
                 expect(res).to.have.property('fullname');
                 expect(res.tag).to.equal('v2.1.0');
             });
-            it('should createImage with tag', async () => {
+            it('should parseImageName with tag', async () => {
                 const image = 'cloud.docker.com/hkube/worker:v2.1.0';
                 const res = utils.parseImageName(image);
                 expect(res).to.have.property('registry');
@@ -200,7 +210,7 @@ describe('KubernetesClient', () => {
             });
         });
         describe('createImage', () => {
-            it('should createImage with tag', async () => {
+            it('should createImage with no tag', async () => {
                 const container = 'worker';
                 const res = utils.createImage(slimJobTemplate, container);
                 expect(res).to.equal('hkube/worker');
@@ -212,14 +222,12 @@ describe('KubernetesClient', () => {
             });
             it('should createImage with tag', async () => {
                 const container = 'worker';
-                const configMapRes = await client.configMaps.get({ name: 'hkube-versions' });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 const res = utils.createImage(slimJobTemplate, container, configMap.versions);
                 expect(res).to.equal('hkube/worker:v2.1.0');
             });
             it('should createImage with tag', async () => {
                 const container = 'worker';
-                const configMapRes = await client.configMaps.get({ name: 'hkube-versions' });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 const res = utils.createImage(slimJobTemplate, container, configMap.versions, { registry: configMap.registry });
                 expect(res).to.equal('cloud.docker.com/hkube/worker:v2.1.0');

@@ -1,11 +1,15 @@
+
+
+const name = 'test-deployment';
+
 const algorithmQueueTemplate = {
     apiVersion: 'apps/v1',
     kind: 'Deployment',
     metadata: {
-        name: 'algorithm-queue-algorithm-name',
+        name,
         labels: {
-            type: 'algorithm-queue',
-            app: 'algorithm-queue-algorithm-name',
+            type: name,
+            app: name,
             group: 'hkube',
             core: 'true'
         }
@@ -14,13 +18,13 @@ const algorithmQueueTemplate = {
         replicas: 1,
         selector: {
             matchLabels: {
-                app: 'algorithm-queue-algorithm-name'
+                app: name
             }
         },
         template: {
             metadata: {
                 labels: {
-                    app: 'algorithm-queue-algorithm-name',
+                    app: name,
                     group: 'hkube'
                 }
             },
@@ -30,7 +34,7 @@ const algorithmQueueTemplate = {
                 },
                 containers: [
                     {
-                        name: 'algorithm-queue',
+                        name,
                         image: 'hkube/algorithm-queue:latest',
                         ports: [
                             {
@@ -39,24 +43,8 @@ const algorithmQueueTemplate = {
                         ],
                         env: [
                             {
-                                name: 'ALGORITHM_TYPE',
-                                value: 'algorithm-name'
-                            },
-                            {
                                 name: 'NODE_ENV',
                                 value: 'kube'
-                            },
-                            {
-                                name: 'METRICS_PORT',
-                                value: '3000'
-                            },
-                            {
-                                name: 'JAEGER_AGENT_SERVICE_HOST',
-                                valueFrom: {
-                                    fieldRef: {
-                                        fieldPath: 'status.hostIP'
-                                    }
-                                }
                             }
                         ]
                     }
