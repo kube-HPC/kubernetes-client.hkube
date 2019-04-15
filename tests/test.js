@@ -21,34 +21,34 @@ const configMapRes = {
     }
 }
 
+const kubeconfig = {
+    apiVersion: 'v1',
+    kind: 'Config',
+    'current-context': 'dev',
+    clusters: [{
+        name: 'dev',
+        cluster: {
+            server: "http://127.0.0.1:9000/api/kube"
+        }
+    }],
+    contexts: [{
+        name: 'dev',
+        context: {
+            cluster: 'dev',
+            user: 'dev-admin'
+        }
+    }],
+    users: [{
+        name: 'default-admin',
+        user: {}
+    }]
+}
+
 describe('KubernetesClient', () => {
     before(async () => {
         const index = require('../index');
         Client = index.Client;
         utils = index.utils;
-
-        const kubeconfig = {
-            apiVersion: 'v1',
-            kind: 'Config',
-            'current-context': 'dev',
-            clusters: [{
-                name: 'dev',
-                cluster: {
-                    server: "http://127.0.0.1:9000/api/kube"
-                }
-            }],
-            contexts: [{
-                name: 'dev',
-                context: {
-                    cluster: 'dev',
-                    user: 'dev-admin'
-                }
-            }],
-            users: [{
-                name: 'default-admin',
-                user: {}
-            }]
-        }
         client = new Client({ isLocal: false, kubeconfig });
         await kubernetesServerMock.start({ port: 9000 });
     });
@@ -58,7 +58,7 @@ describe('KubernetesClient', () => {
                 const config = {
                     isLocal: false
                 };
-                const clientK8s = new Client(config);
+                const clientK8s = new Client({ isLocal: false, kubeconfig });
                 expect(clientK8s).to.have.property('configMaps');
                 expect(clientK8s).to.have.property('deployments');
                 expect(clientK8s).to.have.property('jobs');
