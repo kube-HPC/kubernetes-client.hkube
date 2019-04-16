@@ -28,7 +28,7 @@ const kubeconfig = {
     clusters: [{
         name: 'dev',
         cluster: {
-            server: "http://127.0.0.1:9000/api/kube"
+            server: "http://127.0.0.1:9001/api/kube"
         }
     }],
     contexts: [{
@@ -50,7 +50,7 @@ describe('KubernetesClient', () => {
         Client = index.Client;
         utils = index.utils;
         client = new Client({ isLocal: false, kubeconfig });
-        await kubernetesServerMock.start({ port: 9000 });
+        await kubernetesServerMock.start({ port: 9001 });
     });
     describe('Client', () => {
         describe('Client', () => {
@@ -213,26 +213,55 @@ describe('KubernetesClient', () => {
             });
         });
         describe('createImage', () => {
+            it('should createImage with null', async () => {
+                const image = null;
+                const res = utils.createImage(image);
+                expect(res).to.be.null;
+            });
+            it('should createImage with empty string', async () => {
+                const image = '';
+                const res = utils.createImage(image);
+                expect(res).to.be.null;
+            });
+            it('should createImage with tag', async () => {
+                const image = 'hkube/worker';
+                const res = utils.createImage(image);
+                expect(res).to.equal('hkube/worker');
+            });
+            it('should createImage with tag', async () => {
+                const image = 'hkube/worker';
+                const configMap = client.configMaps.extractConfigMap(configMapRes);
+                const res = utils.createImage(image, configMap.versions);
+                expect(res).to.equal('hkube/worker:v2.1.0');
+            });
+            it('should createImage with tag', async () => {
+                const image = 'hkube/worker';
+                const configMap = client.configMaps.extractConfigMap(configMapRes);
+                const res = utils.createImage(image, configMap.versions, { registry: configMap.registry });
+                expect(res).to.equal('cloud.docker.com/hkube/worker:v2.1.0');
+            });
+        });
+        describe('createImageFromContainer', () => {
             it('should createImage with no tag', async () => {
                 const container = 'worker';
-                const res = utils.createImage(slimJobTemplate, container);
+                const res = utils.createImageFromContainer(slimJobTemplate, container);
                 expect(res).to.equal('hkube/worker');
             });
             it('should createImage with tag', async () => {
                 const container = 'worker';
-                const res = utils.createImage(jobTemplate, container);
+                const res = utils.createImageFromContainer(jobTemplate, container);
                 expect(res).to.equal('hkube/worker:latest');
             });
             it('should createImage with tag', async () => {
                 const container = 'worker';
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
-                const res = utils.createImage(slimJobTemplate, container, configMap.versions);
+                const res = utils.createImageFromContainer(slimJobTemplate, container, configMap.versions);
                 expect(res).to.equal('hkube/worker:v2.1.0');
             });
             it('should createImage with tag', async () => {
                 const container = 'worker';
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
-                const res = utils.createImage(slimJobTemplate, container, configMap.versions, { registry: configMap.registry });
+                const res = utils.createImageFromContainer(slimJobTemplate, container, configMap.versions, { registry: configMap.registry });
                 expect(res).to.equal('cloud.docker.com/hkube/worker:v2.1.0');
             });
         });
