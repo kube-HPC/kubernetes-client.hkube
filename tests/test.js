@@ -556,5 +556,50 @@ describe('KubernetesClient', () => {
                 expect(resNew.spec.template.spec.containers[0].volumeMounts).to.not.deep.include(volumeMounts);
             });
         });
+        describe('applyStorage', () => {
+            it('should add volumeMount to spec', () => {
+                const container = 'worker';
+                const storage = 'fs';
+                const configMapName = 'my-configMap';
+                const newVolumeMounts = { name: 'storage-volume', mountPath: '/hkubedata' };
+                const res = utils.applyStorage(slimJobTemplate, storage, container, configMapName);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(1);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.deep.include(newVolumeMounts);
+            });
+            it('should add volumeMount to spec', () => {
+                const container = 'worker';
+                const storage = 'fs';
+                const configMapName = 'my-configMap';
+                const newVolumeMounts = { name: 'storage-volume', mountPath: '/hkubedata' };
+                const envLength = jobTemplate.spec.template.spec.containers[0].volumeMounts.length;
+                const res = utils.applyStorage(jobTemplate, storage, container, configMapName);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(envLength + 1);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.deep.include(newVolumeMounts);
+            });
+            it('should not add volumeMount to spec', () => {
+                const container = 'worker';
+                const storage = 's3';
+                const configMapName = 'my-configMap';
+                const envLength = jobTemplate.spec.template.spec.containers[0].volumeMounts.length;
+                const res = utils.applyStorage(jobTemplate, storage, container, configMapName);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(envLength);
+            });
+            it('should add volumeMount to spec', () => {
+                const container = 'worker';
+                const storage = null;
+                const configMapName = 'my-configMap';
+                const envLength = jobTemplate.spec.template.spec.containers[0].volumeMounts.length;
+                const res = utils.applyStorage(jobTemplate, storage, container, configMapName);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(envLength);
+            });
+            it('should add volumeMount to spec', () => {
+                const container = 'worker';
+                const storage = 'fs';
+                const configMapName = null;
+                const envLength = jobTemplate.spec.template.spec.containers[0].volumeMounts.length;
+                const res = utils.applyStorage(jobTemplate, storage, container, configMapName);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(envLength + 1);
+            });
+        });
     });
 });
