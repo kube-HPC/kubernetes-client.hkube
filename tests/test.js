@@ -223,7 +223,7 @@ describe('KubernetesClient', () => {
                 const res = utils.createImage(image);
                 expect(res).to.be.null;
             });
-            it('should createImage with tag', async () => {
+            it('should createImage with n tag', async () => {
                 const image = 'hkube/worker';
                 const res = utils.createImage(image);
                 expect(res).to.equal('hkube/worker');
@@ -234,11 +234,23 @@ describe('KubernetesClient', () => {
                 const res = utils.createImage(image, configMap.versions);
                 expect(res).to.equal('hkube/worker:v2.1.0');
             });
-            it('should createImage with tag', async () => {
+            it('should createImage with tag and registry', async () => {
                 const image = 'hkube/worker';
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 const res = utils.createImage(image, configMap.versions, { registry: configMap.registry });
                 expect(res).to.equal('cloud.docker.com/hkube/worker:v2.1.0');
+            });
+            it('should createImage with registry', async () => {
+                const image = 'docker.hub.com/hkube/worker';
+                const configMap = client.configMaps.extractConfigMap(configMapRes);
+                const res = utils.createImage(image, configMap.versions, { registry: configMap.registry });
+                expect(res).to.equal(`${image}:v2.1.0`);
+            });
+            it('should createImage with registry and no config map', async () => {
+                const image = 'docker.hub.com/hkube/worker';
+                const configMap = client.configMaps.extractConfigMap(configMapRes);
+                const res = utils.createImage(image, configMap.versions, null);
+                expect(res).to.equal(`${image}:v2.1.0`);
             });
         });
         describe('createImageFromContainer', () => {
