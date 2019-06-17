@@ -132,6 +132,9 @@ describe('KubernetesClient', () => {
             });
         });
         describe('Pods', () => {
+            it('should get all in namespace', async () => {
+                const res = await client.pods.get();
+            });
             it('should get', async () => {
                 const res = await client.pods.get({ podName, labelSelector });
             });
