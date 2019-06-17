@@ -138,6 +138,9 @@ describe('KubernetesClient', () => {
             it('should get all', async () => {
                 const res = await client.pods.all();
             });
+            it('should get all in namespace', async () => {
+                const res = await client.pods.all(true);
+            });
         });
         describe('Services', () => {
             it('should get', async () => {
