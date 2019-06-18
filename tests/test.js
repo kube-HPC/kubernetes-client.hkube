@@ -136,9 +136,15 @@ describe('KubernetesClient', () => {
                 const res = await client.pods.get({ podName, labelSelector });
             });
             it('should get all', async () => {
-                const res = await client.pods.all();
+                const res = await client.pods.get({ useNamespace: false });
             });
             it('should get all in namespace', async () => {
+                const res = await client.pods.get();
+            });
+            it('should get all backward compatibility', async () => {
+                const res = await client.pods.all();
+            });
+            it('should get all in namespace backward compatibility', async () => {
                 const res = await client.pods.all(true);
             });
         });
