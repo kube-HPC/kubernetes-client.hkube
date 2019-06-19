@@ -591,6 +591,18 @@ describe('KubernetesClient', () => {
                 expect(resNew.spec.template.spec.containers[0].volumeMounts).to.not.deep.include(volumeMounts);
             });
         });
+        describe('applyPrivileged', () => {
+            it('should add privileged flag to container', () => {
+                const container = 'worker';
+                const res = utils.applyPrivileged(slimJobTemplate,true,container);
+                expect(res.spec.template.spec.containers[0].securityContext.privileged).to.be.true;
+            });
+            it('should not add privileged flag to container', () => {
+                const container = 'worker';
+                const res = utils.applyPrivileged(slimJobTemplate,false,container);
+                expect(res.spec.template.spec.containers[0].securityContext).to.not.exist;
+            });
+        });
         describe('applyStorage', () => {
             it('should add volumeMount to spec', () => {
                 const container = 'worker';
