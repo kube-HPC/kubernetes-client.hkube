@@ -150,16 +150,16 @@ describe('KubernetesClient', () => {
         });
         describe('ResourceQuotas', () => {
             it('should get', async () => {
-                const res = await client.resourceQuotas.get({ name: 'foo', labelSelector });
+                const res = await client.resourcequotas.get({ name: 'foo', labelSelector });
             });
             it('should get all', async () => {
-                const res = await client.resourceQuotas.get({ useNamespace: false });
+                const res = await client.resourcequotas.get({ useNamespace: false });
             });
             it('should get all in namespace', async () => {
-                const res = await client.resourceQuotas.get({});
+                const res = await client.resourcequotas.get({});
             });
             it('should get all in namespace no args', async () => {
-                const res = await client.resourceQuotas.get();
+                const res = await client.resourcequotas.get();
             });
         });
         describe('Services', () => {
