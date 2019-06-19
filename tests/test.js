@@ -148,6 +148,20 @@ describe('KubernetesClient', () => {
                 const res = await client.pods.all(true);
             });
         });
+        describe('ResourceQuotas', () => {
+            it('should get', async () => {
+                const res = await client.resourceQuotas.get({ name: 'foo', labelSelector });
+            });
+            it('should get all', async () => {
+                const res = await client.resourceQuotas.get({ useNamespace: false });
+            });
+            it('should get all in namespace', async () => {
+                const res = await client.resourceQuotas.get({});
+            });
+            it('should get all in namespace no args', async () => {
+                const res = await client.resourceQuotas.get();
+            });
+        });
         describe('Services', () => {
             it('should get', async () => {
                 const res = await client.services.get({ labelSelector });
