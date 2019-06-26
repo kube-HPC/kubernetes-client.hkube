@@ -49,7 +49,7 @@ describe('KubernetesClient', () => {
         const index = require('../index');
         Client = index.Client;
         utils = index.utils;
-        client = new Client({ isLocal: false, kubeconfig });
+        client = new Client({ isLocal: false, timeout: 5000, kubeconfig });
         await kubernetesServerMock.start({ port: 9001 });
     });
     describe('Client', () => {
