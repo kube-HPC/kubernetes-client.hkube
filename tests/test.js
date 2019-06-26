@@ -132,14 +132,34 @@ describe('KubernetesClient', () => {
             });
         });
         describe('Pods', () => {
-            it('should get all in namespace', async () => {
-                const res = await client.pods.get();
-            });
             it('should get', async () => {
                 const res = await client.pods.get({ podName, labelSelector });
             });
             it('should get all', async () => {
+                const res = await client.pods.get({ useNamespace: false });
+            });
+            it('should get all in namespace', async () => {
+                const res = await client.pods.get();
+            });
+            it('should get all backward compatibility', async () => {
                 const res = await client.pods.all();
+            });
+            it('should get all in namespace backward compatibility', async () => {
+                const res = await client.pods.all(true);
+            });
+        });
+        describe('ResourceQuotas', () => {
+            it('should get', async () => {
+                const res = await client.resourcequotas.get({ name: 'foo', labelSelector });
+            });
+            it('should get all', async () => {
+                const res = await client.resourcequotas.get({ useNamespace: false });
+            });
+            it('should get all in namespace', async () => {
+                const res = await client.resourcequotas.get({});
+            });
+            it('should get all in namespace no args', async () => {
+                const res = await client.resourcequotas.get();
             });
         });
         describe('Services', () => {
@@ -569,6 +589,18 @@ describe('KubernetesClient', () => {
                 expect(resNew.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(envLength);
                 expect(resNew.spec.template.spec.containers[0].volumeMounts).to.deep.include(newVolumeMounts);
                 expect(resNew.spec.template.spec.containers[0].volumeMounts).to.not.deep.include(volumeMounts);
+            });
+        });
+        describe('applyPrivileged', () => {
+            it('should add privileged flag to container', () => {
+                const container = 'worker';
+                const res = utils.applyPrivileged(slimJobTemplate,true,container);
+                expect(res.spec.template.spec.containers[0].securityContext.privileged).to.be.true;
+            });
+            it('should not add privileged flag to container', () => {
+                const container = 'worker';
+                const res = utils.applyPrivileged(slimJobTemplate,false,container);
+                expect(res.spec.template.spec.containers[0].securityContext).to.not.exist;
             });
         });
         describe('applyStorage', () => {
