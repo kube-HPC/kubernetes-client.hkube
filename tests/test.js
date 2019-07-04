@@ -3,6 +3,7 @@ const deploymentTemplate = require('./stubs/deploymentTemplate');
 const jobTemplate = require('./stubs/jobTemplate');
 const slimJobTemplate = require('./stubs/slim-job-template');
 const kubernetesServerMock = require('./mocks/kubernetes-server.mock');
+const secretMock = require('./stubs/secret.json');
 
 const labelSelector = 'group=hkube';
 const deploymentName = 'worker';
@@ -684,6 +685,12 @@ describe('KubernetesClient', () => {
                 const envLength = jobTemplate.spec.template.spec.containers[0].volumeMounts.length;
                 const res = utils.applyStorage(jobTemplate, storage, container, configMapName);
                 expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(envLength + 1);
+            });
+        });
+        describe('applySecret', () => {
+            it('should add volumeMount to spec', () => {
+                const res = utils.applySecret(slimJobTemplate, containerName, secretMock);
+                expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(Object.keys(secretMock.data).length);
             });
         });
     });
