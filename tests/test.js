@@ -9,7 +9,9 @@ const deploymentName = 'worker';
 const jobName = 'worker';
 const podName = 'worker';
 const containerName = 'worker';
+const secretName = 'worker';
 let client, Client, utils;
+const response = { statusCode: 200, body: { status: 'ok' } };
 
 const configMapRes = {
     body: {
@@ -68,6 +70,7 @@ describe('KubernetesClient', () => {
         describe('ConfigMaps', () => {
             it('should get configMaps', async () => {
                 const res = await client.configMaps.get({ name: 'hkube-versions' });
+                expect(res).to.eql(response);
             });
             it('should extractConfigMap', async () => {
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
@@ -79,106 +82,141 @@ describe('KubernetesClient', () => {
         describe('Deployments', () => {
             it('should get', async () => {
                 const res = await client.deployments.get({ labelSelector });
+                expect(res).to.eql(response);
             });
             it('should create', async () => {
                 const res = await client.deployments.create({ spec: deploymentTemplate });
+                expect(res).to.eql(response);
             });
             it('should update', async () => {
                 const res = await client.deployments.update({ deploymentName, spec: deploymentTemplate });
+                expect(res).to.eql(response);
             });
             it('should delete', async () => {
                 const res = await client.deployments.delete({ deploymentName });
+                expect(res).to.eql(response);
             });
         });
         describe('Ingresses', () => {
             it('should get', async () => {
                 const res = await client.ingresses.get({ labelSelector });
+                expect(res).to.eql(response);
             });
             it('should create', async () => {
                 const res = await client.ingresses.create({ spec: deploymentTemplate });
+                expect(res).to.eql(response);
             });
             it('should update', async () => {
                 const res = await client.ingresses.update({ deploymentName, spec: deploymentTemplate });
+                expect(res).to.eql(response);
             });
             it('should delete', async () => {
                 const res = await client.ingresses.delete({ deploymentName });
+                expect(res).to.eql(response);
             });
         });
         describe('Jobs', () => {
             it('should get', async () => {
                 const res = await client.jobs.get({ labelSelector });
+                expect(res).to.eql(response);
             });
             it('should create', async () => {
                 const res = await client.jobs.create({ spec: jobTemplate });
+                expect(res).to.eql(response);
             });
             it('should update', async () => {
                 const res = await client.jobs.update({ jobName, spec: jobTemplate });
+                expect(res).to.eql(response);
             });
             it('should delete', async () => {
                 const res = await client.jobs.delete({ jobName });
+                expect(res).to.eql(response);
             });
         });
         describe('Logs', () => {
             it('should get', async () => {
                 const res = await client.logs.get({ podName, containerName });
+                expect(res).to.eql(response);
             });
         });
         describe('Nodes', () => {
             it('should get', async () => {
                 const res = await client.nodes.get({ labelSelector });
+                expect(res).to.eql(response);
             });
             it('should get all', async () => {
                 const res = await client.nodes.all();
+                expect(res).to.eql(response);
             });
         });
         describe('Pods', () => {
             it('should get', async () => {
                 const res = await client.pods.get({ podName, labelSelector });
+                expect(res).to.eql(response);
             });
             it('should get all', async () => {
                 const res = await client.pods.get({ useNamespace: false });
+                expect(res).to.eql(response);
             });
             it('should get all in namespace', async () => {
                 const res = await client.pods.get();
+                expect(res).to.eql(response);
             });
             it('should get all backward compatibility', async () => {
                 const res = await client.pods.all();
+                expect(res).to.eql(response);
             });
             it('should get all in namespace backward compatibility', async () => {
                 const res = await client.pods.all(true);
+                expect(res).to.eql(response);
             });
         });
         describe('ResourceQuotas', () => {
             it('should get', async () => {
                 const res = await client.resourcequotas.get({ name: 'foo', labelSelector });
+                expect(res).to.eql(response);
             });
             it('should get all', async () => {
                 const res = await client.resourcequotas.get({ useNamespace: false });
+                expect(res).to.eql(response);
             });
             it('should get all in namespace', async () => {
                 const res = await client.resourcequotas.get({});
+                expect(res).to.eql(response);
             });
             it('should get all in namespace no args', async () => {
                 const res = await client.resourcequotas.get();
+                expect(res).to.eql(response);
             });
         });
         describe('Services', () => {
             it('should get', async () => {
                 const res = await client.services.get({ labelSelector });
+                expect(res).to.eql(response);
             });
             it('should create', async () => {
                 const res = await client.services.create({ spec: deploymentTemplate });
+                expect(res).to.eql(response);
             });
             it('should update', async () => {
                 const res = await client.services.update({ deploymentName, spec: deploymentTemplate });
+                expect(res).to.eql(response);
             });
             it('should delete', async () => {
                 const res = await client.services.delete({ deploymentName });
+                expect(res).to.eql(response);
+            });
+        });
+        describe('Secrets', () => {
+            it('should get', async () => {
+                const res = await client.secrets.get({ secretName });
+                expect(res).to.eql(response);
             });
         });
         describe('Versions', () => {
             it('should get', async () => {
                 const res = await client.versions.get();
+                expect(res).to.eql(response);
             });
         });
     });
@@ -594,12 +632,12 @@ describe('KubernetesClient', () => {
         describe('applyPrivileged', () => {
             it('should add privileged flag to container', () => {
                 const container = 'worker';
-                const res = utils.applyPrivileged(slimJobTemplate,true,container);
+                const res = utils.applyPrivileged(slimJobTemplate, true, container);
                 expect(res.spec.template.spec.containers[0].securityContext.privileged).to.be.true;
             });
             it('should not add privileged flag to container', () => {
                 const container = 'worker';
-                const res = utils.applyPrivileged(slimJobTemplate,false,container);
+                const res = utils.applyPrivileged(slimJobTemplate, false, container);
                 expect(res.spec.template.spec.containers[0].securityContext).to.not.exist;
             });
         });
