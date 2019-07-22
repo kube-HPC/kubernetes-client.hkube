@@ -11,18 +11,9 @@ const jobName = 'worker';
 const podName = 'worker';
 const containerName = 'worker';
 const secretName = 'worker';
+const configMapName = 'hkube-versions';
 let client, Client, utils;
 const response = { statusCode: 200, body: { status: 'ok' } };
-
-const configMapRes = {
-    body: {
-        data: {
-            'versions.json': JSON.stringify({ name: 'hkube-versions', versions: [{ project: 'worker', tag: 'v2.1.0' }] }),
-            'registry.json': JSON.stringify('cloud.docker.com'),
-            'clusterOptions.json': JSON.stringify({ useNodeSelector: true }),
-        }
-    }
-}
 
 const kubeconfig = {
     apiVersion: 'v1',
@@ -60,24 +51,37 @@ describe('KubernetesClient', () => {
             it('should create new Client with isLocal:false', async () => {
                 const clientK8s = new Client({ isLocal: false, kubeconfig });
                 expect(clientK8s).to.have.property('configMaps');
+                expect(clientK8s).to.have.property('containers');
                 expect(clientK8s).to.have.property('deployments');
+                expect(clientK8s).to.have.property('ingresses');
                 expect(clientK8s).to.have.property('jobs');
                 expect(clientK8s).to.have.property('logs');
                 expect(clientK8s).to.have.property('nodes');
                 expect(clientK8s).to.have.property('pods');
+                expect(clientK8s).to.have.property('services');
                 expect(clientK8s).to.have.property('versions');
+                expect(clientK8s).to.have.property('resourcequotas');
+                expect(clientK8s).to.have.property('secrets');
             });
         });
         describe('ConfigMaps', () => {
             it('should get configMaps', async () => {
-                const res = await client.configMaps.get({ name: 'hkube-versions' });
-                expect(res).to.eql(response);
+                const configMapRes = await client.configMaps.get({ name: configMapName });
+                expect(configMapRes).to.have.property('body');
+                expect(configMapRes).to.have.property('statusCode');
             });
             it('should extractConfigMap', async () => {
+                const configMapRes = await client.configMaps.get({ name: configMapName });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 expect(configMap).to.have.property('versions');
                 expect(configMap).to.have.property('registry');
                 expect(configMap).to.have.property('clusterOptions');
+            });
+        });
+        describe('Containers', () => {
+            it('should get status', async () => {
+                const containerStatus = await client.containers.getStatus({ podName, containerName });
+                expect(containerStatus).to.have.property('status');
             });
         });
         describe('Deployments', () => {
@@ -153,23 +157,28 @@ describe('KubernetesClient', () => {
         describe('Pods', () => {
             it('should get', async () => {
                 const res = await client.pods.get({ podName, labelSelector });
-                expect(res).to.eql(response);
+                expect(res).to.have.property('statusCode');
+                expect(res).to.have.property('body');
             });
             it('should get all', async () => {
                 const res = await client.pods.get({ useNamespace: false });
-                expect(res).to.eql(response);
+                expect(res).to.have.property('statusCode');
+                expect(res).to.have.property('body');
             });
             it('should get all in namespace', async () => {
                 const res = await client.pods.get();
-                expect(res).to.eql(response);
+                expect(res).to.have.property('statusCode');
+                expect(res).to.have.property('body');
             });
             it('should get all backward compatibility', async () => {
                 const res = await client.pods.all();
-                expect(res).to.eql(response);
+                expect(res).to.have.property('statusCode');
+                expect(res).to.have.property('body');
             });
             it('should get all in namespace backward compatibility', async () => {
                 const res = await client.pods.all(true);
-                expect(res).to.eql(response);
+                expect(res).to.have.property('statusCode');
+                expect(res).to.have.property('body');
             });
         });
         describe('ResourceQuotas', () => {
@@ -292,24 +301,28 @@ describe('KubernetesClient', () => {
             });
             it('should createImage with tag', async () => {
                 const image = 'hkube/worker';
+                const configMapRes = await client.configMaps.get({ name: configMapName });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 const res = utils.createImage(image, configMap.versions);
                 expect(res).to.equal('hkube/worker:v2.1.0');
             });
             it('should createImage with tag and registry', async () => {
                 const image = 'hkube/worker';
+                const configMapRes = await client.configMaps.get({ name: configMapName });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 const res = utils.createImage(image, configMap.versions, { registry: configMap.registry });
                 expect(res).to.equal('cloud.docker.com/hkube/worker:v2.1.0');
             });
             it('should createImage with registry', async () => {
                 const image = 'docker.hub.com/hkube/worker';
+                const configMapRes = await client.configMaps.get({ name: configMapName });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 const res = utils.createImage(image, configMap.versions, { registry: configMap.registry });
                 expect(res).to.equal(`${image}:v2.1.0`);
             });
             it('should createImage with registry and no config map', async () => {
                 const image = 'docker.hub.com/hkube/worker';
+                const configMapRes = await client.configMaps.get({ name: configMapName });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 const res = utils.createImage(image, configMap.versions, null);
                 expect(res).to.equal(`${image}:v2.1.0`);
@@ -328,12 +341,14 @@ describe('KubernetesClient', () => {
             });
             it('should createImage with tag', async () => {
                 const container = 'worker';
+                const configMapRes = await client.configMaps.get({ name: configMapName });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 const res = utils.createImageFromContainer(slimJobTemplate, container, configMap.versions);
                 expect(res).to.equal('hkube/worker:v2.1.0');
             });
             it('should createImage with tag', async () => {
                 const container = 'worker';
+                const configMapRes = await client.configMaps.get({ name: configMapName });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 const res = utils.createImageFromContainer(slimJobTemplate, container, configMap.versions, { registry: configMap.registry });
                 expect(res).to.equal('cloud.docker.com/hkube/worker:v2.1.0');

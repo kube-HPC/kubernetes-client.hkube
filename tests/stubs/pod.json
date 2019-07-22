@@ -1,0 +1,292 @@
+{
+    "statusCode": 200,
+    "body": {
+        "kind": "Pod",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "green-alg-09f83fd1-67ae-46db-b60c-4fba84d5396f-tbqnn",
+            "generateName": "green-alg-09f83fd1-67ae-46db-b60c-4fba84d5396f-",
+            "namespace": "default",
+            "selfLink": "/api/v1/namespaces/default/pods/green-alg-09f83fd1-67ae-46db-b60c-4fba84d5396f-tbqnn",
+            "uid": "7167e29a-ac53-11e9-bb00-000d3ab7e5fc",
+            "resourceVersion": "108262899",
+            "creationTimestamp": "2019-07-22T07:36:39Z",
+            "labels": {
+                "algorithm-name": "green-alg",
+                "controller-uid": "7165231e-ac53-11e9-bb00-000d3ab7e5fc",
+                "group": "hkube",
+                "job-name": "green-alg-09f83fd1-67ae-46db-b60c-4fba84d5396f",
+                "metrics-group": "workers",
+                "type": "worker"
+            },
+            "ownerReferences": [
+                {
+                    "apiVersion": "batch/v1",
+                    "kind": "Job",
+                    "name": "green-alg-09f83fd1-67ae-46db-b60c-4fba84d5396f",
+                    "uid": "7165231e-ac53-11e9-bb00-000d3ab7e5fc",
+                    "controller": true,
+                    "blockOwnerDeletion": true
+                }
+            ]
+        },
+        "spec": {
+            "volumes": [
+                {
+                    "name": "storage-volume",
+                    "persistentVolumeClaim": {
+                        "claimName": "hkube-storage-pvc"
+                    }
+                },
+                {
+                    "name": "varlog",
+                    "hostPath": {
+                        "path": "/var/log",
+                        "type": ""
+                    }
+                },
+                {
+                    "name": "varlibdockercontainers",
+                    "hostPath": {
+                        "path": "/var/lib/docker/containers",
+                        "type": ""
+                    }
+                },
+                {
+                    "name": "worker-serviceaccount-token-f8r5n",
+                    "secret": {
+                        "secretName": "worker-serviceaccount-token-f8r5n",
+                        "defaultMode": 420
+                    }
+                }
+            ],
+            "containers": [
+                {
+                    "name": "worker",
+                    "image": "hkube/worker:v1.1.123",
+                    "env": [
+                        {
+                            "name": "NODE_ENV",
+                            "value": "production"
+                        },
+                        {
+                            "name": "ALGORITHM_TYPE",
+                            "value": "green-alg"
+                        },
+                        {
+                            "name": "METRICS_PORT",
+                            "value": "3001"
+                        },
+                        {
+                            "name": "INACTIVE_PAUSED_WORKER_TIMEOUT_MS",
+                            "value": "10000"
+                        },
+                        {
+                            "name": "POD_ID",
+                            "valueFrom": {
+                                "fieldRef": {
+                                    "apiVersion": "v1",
+                                    "fieldPath": "metadata.uid"
+                                }
+                            }
+                        },
+                        {
+                            "name": "POD_NAME",
+                            "valueFrom": {
+                                "fieldRef": {
+                                    "apiVersion": "v1",
+                                    "fieldPath": "metadata.name"
+                                }
+                            }
+                        },
+                        {
+                            "name": "NAMESPACE",
+                            "valueFrom": {
+                                "fieldRef": {
+                                    "apiVersion": "v1",
+                                    "fieldPath": "metadata.namespace"
+                                }
+                            }
+                        },
+                        {
+                            "name": "DEFAULT_STORAGE",
+                            "valueFrom": {
+                                "configMapKeyRef": {
+                                    "name": "task-executor-configmap",
+                                    "key": "DEFAULT_STORAGE"
+                                }
+                            }
+                        },
+                        {
+                            "name": "CLUSTER_NAME",
+                            "valueFrom": {
+                                "configMapKeyRef": {
+                                    "name": "task-executor-configmap",
+                                    "key": "CLUSTER_NAME"
+                                }
+                            }
+                        },
+                        {
+                            "name": "JAEGER_AGENT_SERVICE_HOST",
+                            "valueFrom": {
+                                "fieldRef": {
+                                    "apiVersion": "v1",
+                                    "fieldPath": "status.hostIP"
+                                }
+                            }
+                        },
+                        {
+                            "name": "WORKER_SOCKET_MAX_PAYLOAD_BYTES",
+                            "valueFrom": {
+                                "configMapKeyRef": {
+                                    "name": "task-executor-configmap",
+                                    "key": "WORKER_SOCKET_MAX_PAYLOAD_BYTES"
+                                }
+                            }
+                        },
+                        {
+                            "name": "INACTIVE_WORKER_TIMEOUT_MS",
+                            "value": "5000"
+                        },
+                        {
+                            "name": "BASE_FS_ADAPTER_DIRECTORY",
+                            "valueFrom": {
+                                "configMapKeyRef": {
+                                    "name": "task-executor-configmap",
+                                    "key": "BASE_FS_ADAPTER_DIRECTORY"
+                                }
+                            }
+                        }
+                    ],
+                    "resources": {
+                        "limits": {
+                            "cpu": "200m",
+                            "memory": "512Mi"
+                        },
+                        "requests": {
+                            "cpu": "100m",
+                            "memory": "256Mi"
+                        }
+                    },
+                    "volumeMounts": [
+                        {
+                            "name": "storage-volume",
+                            "mountPath": "/hkubedata"
+                        },
+                        {
+                            "name": "varlog",
+                            "mountPath": "/var/log"
+                        },
+                        {
+                            "name": "varlibdockercontainers",
+                            "readOnly": true,
+                            "mountPath": "/var/lib/docker/containers"
+                        },
+                        {
+                            "name": "worker-serviceaccount-token-f8r5n",
+                            "readOnly": true,
+                            "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+                        }
+                    ],
+                    "terminationMessagePath": "/dev/termination-log",
+                    "terminationMessagePolicy": "File",
+                    "imagePullPolicy": "IfNotPresent",
+                    "securityContext": {
+                        "privileged": true
+                    }
+                },
+                {
+                    "name": "algorunner",
+                    "image": "hkube/algorithm-example-python:v1.0.45",
+                    "resources": {
+                        "limits": {
+                            "cpu": "200m",
+                            "memory": "2Gi"
+                        },
+                        "requests": {
+                            "cpu": "100m",
+                            "memory": "1Gi"
+                        }
+                    },
+                    "volumeMounts": [
+                        {
+                            "name": "worker-serviceaccount-token-f8r5n",
+                            "readOnly": true,
+                            "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount"
+                        }
+                    ],
+                    "terminationMessagePath": "/dev/termination-log",
+                    "terminationMessagePolicy": "File",
+                    "imagePullPolicy": "IfNotPresent"
+                }
+            ],
+            "restartPolicy": "Never",
+            "terminationGracePeriodSeconds": 30,
+            "dnsPolicy": "ClusterFirst",
+            "serviceAccountName": "worker-serviceaccount",
+            "serviceAccount": "worker-serviceaccount",
+            "nodeName": "agampub-n2",
+            "securityContext": {},
+            "schedulerName": "default-scheduler"
+        },
+        "status": {
+            "phase": "Pending",
+            "conditions": [
+                {
+                    "type": "Initialized",
+                    "status": "True",
+                    "lastProbeTime": null,
+                    "lastTransitionTime": "2019-07-22T07:36:39Z"
+                },
+                {
+                    "type": "Ready",
+                    "status": "False",
+                    "lastProbeTime": null,
+                    "lastTransitionTime": "2019-07-22T07:36:39Z",
+                    "reason": "ContainersNotReady",
+                    "message": "containers with unready status: [algorunner]"
+                },
+                {
+                    "type": "PodScheduled",
+                    "status": "True",
+                    "lastProbeTime": null,
+                    "lastTransitionTime": "2019-07-22T07:36:39Z"
+                }
+            ],
+            "hostIP": "10.0.0.5",
+            "podIP": "10.233.67.87",
+            "startTime": "2019-07-22T07:36:39Z",
+            "containerStatuses": [
+                {
+                    "name": "algorunner",
+                    "state": {
+                        "waiting": {
+                            "reason": "ErrImagePull",
+                            "message": "rpc error: code = Unknown desc = Error response from daemon: manifest for hkube/algorithm-example-python:v1.0.45 not found"
+                        }
+                    },
+                    "lastState": {},
+                    "ready": false,
+                    "restartCount": 0,
+                    "image": "hkube/algorithm-example-python:v1.0.45",
+                    "imageID": ""
+                },
+                {
+                    "name": "worker",
+                    "state": {
+                        "running": {
+                            "startedAt": "2019-07-22T07:36:44Z"
+                        }
+                    },
+                    "lastState": {},
+                    "ready": true,
+                    "restartCount": 0,
+                    "image": "hkube/worker:v2.1.0",
+                    "imageID": "docker-pullable://hkube/worker@sha256:b64e7acf5bf32eeb0c25d7520987d9a65a2e329af4204624d2956abdc0c49b97",
+                    "containerID": "docker://a2d10add25d61a288bd75a10e2396b1d890d97163a4dab1b9c4d502e939a0c33"
+                }
+            ],
+            "qosClass": "Burstable"
+        }
+    }
+}

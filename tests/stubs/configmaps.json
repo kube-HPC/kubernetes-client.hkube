@@ -1,0 +1,20 @@
+{
+    "statusCode": 200,
+    "body": {
+        "kind": "ConfigMap",
+        "apiVersion": "v1",
+        "metadata": {
+            "name": "hkube-versions",
+            "namespace": "default",
+            "selfLink": "/api/v1/namespaces/default/configmaps/hkube-versions",
+            "uid": "34079de0-91cd-11e9-bb00-000d3ab7e5fc",
+            "resourceVersion": "108099288",
+            "creationTimestamp": "2019-06-18T13:30:13Z"
+        },
+        "data": {
+            "versions.json": "{\"name\":\"hkube-versions\",\"versions\":[{\"project\":\"worker\",\"tag\":\"v2.1.0\"}]}",
+            "registry.json": "\"cloud.docker.com\"",
+            "clusterOptions.json": "{\"useNodeSelector\":true}"
+        }
+    }
+}
