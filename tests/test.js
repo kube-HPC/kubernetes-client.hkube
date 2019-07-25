@@ -258,6 +258,10 @@ describe('KubernetesClient', () => {
                 expect(res).to.have.property('tag');
                 expect(res).to.have.property('name');
                 expect(res).to.have.property('fullname');
+                expect(res.namespace).to.not.exist;
+                expect(res.repository).to.equal('worker');
+                expect(res.tag).to.not.exist;
+                expect(res.name).to.equal('worker');
                 expect(res.fullname).to.equal('library/worker:latest');
             });
             it('should parseImageName with tag', async () => {
@@ -269,7 +273,11 @@ describe('KubernetesClient', () => {
                 expect(res).to.have.property('tag');
                 expect(res).to.have.property('name');
                 expect(res).to.have.property('fullname');
+                expect(res.namespace).to.equal('hkube');
+                expect(res.repository).to.equal('worker');
                 expect(res.tag).to.equal('v2.1.0');
+                expect(res.name).to.equal('hkube/worker:v2.1.0');
+                expect(res.fullname).to.equal('hkube/worker:v2.1.0');
             });
             it('should parseImageName with tag', async () => {
                 const image = 'cloud.docker.com/hkube/worker:v2.1.0';
@@ -281,6 +289,29 @@ describe('KubernetesClient', () => {
                 expect(res).to.have.property('name');
                 expect(res).to.have.property('fullname');
                 expect(res.registry).to.equal('cloud.docker.com');
+                expect(res.namespace).to.equal('hkube');
+                expect(res.repository).to.equal('worker');
+                expect(res.tag).to.equal('v2.1.0');
+                expect(res.name).to.equal('cloud.docker.com/hkube/worker:v2.1.0');
+                expect(res.fullname).to.equal('cloud.docker.com/hkube/worker:v2.1.0');
+            });
+            it('should parseImageName with long reg name', async () => {
+                const image = 'hostname.com/docker-virtual/foo/foo/algorithm-queue:v1.1.44';
+                const res = utils.parseImageName(image);
+                expect(res).to.exist;
+                expect(res).to.have.property('registry');
+                expect(res).to.have.property('namespace');
+                expect(res).to.have.property('repository');
+                expect(res).to.have.property('tag');
+                expect(res).to.have.property('name');
+                expect(res).to.have.property('fullname');
+                
+                expect(res.registry).to.equal('hostname.com');
+                expect(res.namespace).to.equal('docker-virtual/foo/foo');
+                expect(res.repository).to.equal('algorithm-queue');
+                expect(res.tag).to.equal('v1.1.44');
+                expect(res.name).to.equal('hostname.com/docker-virtual/foo/foo/algorithm-queue:v1.1.44');
+                expect(res.fullname).to.equal('hostname.com/docker-virtual/foo/foo/algorithm-queue:v1.1.44');
             });
         });
         describe('createImage', () => {
