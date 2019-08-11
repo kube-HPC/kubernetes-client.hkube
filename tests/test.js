@@ -180,6 +180,10 @@ describe('KubernetesClient', () => {
                 expect(res).to.have.property('statusCode');
                 expect(res).to.have.property('body');
             });
+            it('should delete', async () => {
+                const res = await client.pods.delete({ podName });
+                expect(res.statusCode).to.eql(200);
+            });
         });
         describe('ResourceQuotas', () => {
             it('should get', async () => {
