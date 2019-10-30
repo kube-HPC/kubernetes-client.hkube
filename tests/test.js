@@ -374,14 +374,22 @@ describe('KubernetesClient', () => {
                 const res = utils.createImageFromContainer(jobTemplate, container);
                 expect(res).to.equal('hkube/worker:latest');
             });
-            it('should createImage with tag', async () => {
+            it('should createImage with tag 2', async () => {
                 const container = 'worker';
                 const configMapRes = await client.configMaps.get({ name: configMapName });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
                 const res = utils.createImageFromContainer(slimJobTemplate, container, configMap.versions);
                 expect(res).to.equal('hkube/worker:v2.1.0');
             });
-            it('should createImage with tag', async () => {
+            it('should createImage with image from config map', async () => {
+                const container = 'worker';
+                const configMapRes = await client.configMaps.get({ name: configMapName });
+                const configMap = client.configMaps.extractConfigMap(configMapRes);
+                configMap.versions.versions.find(v=>v.project===container).image='foo/worker2'
+                const res = utils.createImageFromContainer(slimJobTemplate, container, configMap.versions, { registry: configMap.registry });
+                expect(res).to.equal('cloud.docker.com/foo/worker2:v2.1.0');
+            });
+            it('should createImage with tag 3', async () => {
                 const container = 'worker';
                 const configMapRes = await client.configMaps.get({ name: configMapName });
                 const configMap = client.configMaps.extractConfigMap(configMapRes);
