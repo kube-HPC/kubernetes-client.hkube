@@ -740,9 +740,21 @@ describe('KubernetesClient', () => {
                 const container = 'worker';
                 const storage = 'fs';
                 const configMapName = null;
-                const envLength = jobTemplate.spec.template.spec.containers[0].volumeMounts.length;
+                const volLength = jobTemplate.spec.template.spec.containers[0].volumeMounts.length;
+                const envLength = jobTemplate.spec.template.spec.containers[0].env.length;
                 const res = utils.applyStorage(jobTemplate, storage, container, configMapName);
-                expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(envLength + 1);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(volLength + 1);
+                expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(envLength + 2);
+            });
+            it('should add storage env to spec', () => {
+                const container = 'worker';
+                const storage = 's3';
+                const configMapName = null;
+                const volLength = jobTemplate.spec.template.spec.containers[0].volumeMounts.length;
+                const envLength = jobTemplate.spec.template.spec.containers[0].env.length;
+                const res = utils.applyStorage(jobTemplate, storage, container, configMapName);
+                expect(res.spec.template.spec.containers[0].volumeMounts).to.have.lengthOf(volLength);
+                expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(envLength + 4);
             });
         });
         describe('applySecret', () => {
