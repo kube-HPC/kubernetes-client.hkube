@@ -440,6 +440,7 @@ describe('KubernetesClient', () => {
                 const res = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1' });
                 expect(res.metadata.annotations).to.exist;
                 expect(res.metadata.annotations.ann1).to.eql('value1');
+                expect(res.spec.template.metadata.annotations.ann1).to.eql('value1');
 
             });
             it('should add to not empty metadata', () => {
@@ -448,6 +449,8 @@ describe('KubernetesClient', () => {
                 expect(res2.metadata.annotations).to.exist;
                 expect(res2.metadata.annotations.ann1).to.eql('value1');
                 expect(res2.metadata.annotations.ann2).to.eql('value2');
+                expect(res2.spec.template.metadata.annotations.ann2).to.eql('value2');
+
 
             });
             it('should add multiple keys', () => {
@@ -455,6 +458,7 @@ describe('KubernetesClient', () => {
                 expect(res2.metadata.annotations).to.exist;
                 expect(res2.metadata.annotations.ann1).to.eql('value1');
                 expect(res2.metadata.annotations.ann2).to.eql('value2');
+                expect(res2.spec.template.metadata.annotations.ann2).to.eql('value2');
 
             });
             it('should delete annotation', () => {
@@ -464,6 +468,7 @@ describe('KubernetesClient', () => {
                 expect(res2.metadata.annotations).to.exist;
                 expect(res2.metadata.annotations.ann1).to.eql('value1');
                 expect(res2.metadata.annotations.ann2).to.not.exist
+                expect(res2.spec.template.metadata.annotations.ann2).to.not.exist
 
             });
         });
