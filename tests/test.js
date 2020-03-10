@@ -434,6 +434,39 @@ describe('KubernetesClient', () => {
                 expect(res.spec.template.spec.containers[0].resources).to.eql(resources);
             });
         });
+
+        describe('applyAnnotations', () => {
+            it('should add to empty metadata', () => {
+                const res = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1' });
+                expect(res.metadata.annotations).to.exist;
+                expect(res.metadata.annotations.ann1).to.eql('value1');
+
+            });
+            it('should add to not empty metadata', () => {
+                const res1 = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1' });
+                const res2 = utils.applyAnnotation(res1, { ann2: 'value2' });
+                expect(res2.metadata.annotations).to.exist;
+                expect(res2.metadata.annotations.ann1).to.eql('value1');
+                expect(res2.metadata.annotations.ann2).to.eql('value2');
+
+            });
+            it('should add multiple keys', () => {
+                const res2 = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1' , ann2: 'value2' });
+                expect(res2.metadata.annotations).to.exist;
+                expect(res2.metadata.annotations.ann1).to.eql('value1');
+                expect(res2.metadata.annotations.ann2).to.eql('value2');
+
+            });
+            it('should delete annotation', () => {
+                const res1 = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1' , ann2: 'value2' });
+                expect(res1.metadata.annotations.ann1).to.eql('value1');
+                const res2 = utils.applyAnnotation(res1, { ann2: null });
+                expect(res2.metadata.annotations).to.exist;
+                expect(res2.metadata.annotations.ann1).to.eql('value1');
+                expect(res2.metadata.annotations.ann2).to.not.exist
+
+            });
+        });
         describe('applyEnvToContainer', () => {
             it('should add env to spec', () => {
                 const container = 'worker';
