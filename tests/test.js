@@ -435,6 +435,27 @@ describe('KubernetesClient', () => {
             });
         });
 
+        describe('applyImagePullSecret', () => {
+            it('should set one secret', () => {
+                const res = utils.applyImagePullSecret(slimJobTemplate,'my-secret');
+                expect(res.spec.template.spec.imagePullSecrets).to.exist;
+                expect(res.spec.template.spec.imagePullSecrets[0]).to.eql({name: 'my-secret'});
+            });
+            it('should add two secrets', () => {
+                let res = utils.applyImagePullSecret(slimJobTemplate,'my-secret');
+                res = utils.applyImagePullSecret(res,'my-secret2');
+                expect(res.spec.template.spec.imagePullSecrets).to.exist;
+                expect(res.spec.template.spec.imagePullSecrets[0]).to.eql({name: 'my-secret'});
+                expect(res.spec.template.spec.imagePullSecrets[1]).to.eql({name: 'my-secret2'});
+            });
+            it('should not duplicate', () => {
+                let res = utils.applyImagePullSecret(slimJobTemplate,'my-secret');
+                res = utils.applyImagePullSecret(res,'my-secret');
+                expect(res.spec.template.spec.imagePullSecrets).to.exist;
+                expect(res.spec.template.spec.imagePullSecrets).to.have.lengthOf(1);
+                expect(res.spec.template.spec.imagePullSecrets[0]).to.eql({name: 'my-secret'});
+            });
+        });
         describe('applyAnnotations', () => {
             it('should add to empty metadata', () => {
                 const res = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1' });
