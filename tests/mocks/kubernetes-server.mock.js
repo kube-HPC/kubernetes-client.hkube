@@ -7,7 +7,8 @@ const configmaps = require('../stubs/configmaps.json');
 
 const map = {
     '/api/kube/api/v1/namespaces/default/pods/worker': pod,
-    '/api/kube/api/v1/namespaces/default/configmaps/hkube-versions': configmaps
+    '/api/kube/api/v1/namespaces/default/configmaps/hkube-versions': configmaps,
+    '/api/kube/api/v1/namespaces/default/resourcequotas/foo': {body: {name: 'foo'}}
 }
 
 class MockClient {
@@ -18,7 +19,11 @@ class MockClient {
             app.use(bodyParser.json());
             app.use('/', (req, res) => {
                 const p = map[req.path];
-                res.json((p && p.body) || ({ status: 'ok' }));
+                const reply = (p && p.body) || ({ status: 'ok' });
+                if (this.addPath) {
+                    reply.path = req.path;
+                }
+                res.json(reply);
             });
 
             this._server.listen(options.port, (err) => {
