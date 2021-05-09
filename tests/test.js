@@ -155,28 +155,39 @@ describe('KubernetesClient', () => {
             });
         });
         describe('Pods', () => {
+            before(() => {
+                kubernetesServerMock.addPath=true;
+            });
+            after(() => {
+                kubernetesServerMock.addPath=false;
+            });
             it('should get', async () => {
                 const res = await client.pods.get({ podName, labelSelector });
+                expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/pods/worker')
                 expect(res).to.have.property('statusCode');
-                expect(res).to.have.property('body');
+                expect(res).to.have.property('body');                
             });
             it('should get all', async () => {
                 const res = await client.pods.get({ useNamespace: false });
+                expect(res.body.path).to.eql('/api/kube/api/v1/pods')
                 expect(res).to.have.property('statusCode');
                 expect(res).to.have.property('body');
             });
             it('should get all in namespace', async () => {
                 const res = await client.pods.get();
+                expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/pods/')
                 expect(res).to.have.property('statusCode');
                 expect(res).to.have.property('body');
             });
             it('should get all backward compatibility', async () => {
                 const res = await client.pods.all();
+                expect(res.body.path).to.eql('/api/kube/api/v1/pods')
                 expect(res).to.have.property('statusCode');
                 expect(res).to.have.property('body');
             });
             it('should get all in namespace backward compatibility', async () => {
                 const res = await client.pods.all(true);
+                expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/pods/')
                 expect(res).to.have.property('statusCode');
                 expect(res).to.have.property('body');
             });
@@ -186,21 +197,27 @@ describe('KubernetesClient', () => {
             });
         });
         describe('ResourceQuotas', () => {
+            before(() => {
+                kubernetesServerMock.addPath=true;
+            });
+            after(() => {
+                kubernetesServerMock.addPath=false;
+            });
             it('should get', async () => {
                 const res = await client.resourcequotas.get({ name: 'foo', labelSelector });
-                expect(res).to.eql(response);
+                expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/resourcequotas/foo')
             });
             it('should get all', async () => {
                 const res = await client.resourcequotas.get({ useNamespace: false });
-                expect(res).to.eql(response);
+                expect(res.body.path).to.eql('/api/kube/api/v1/resourcequotas')
             });
             it('should get all in namespace', async () => {
                 const res = await client.resourcequotas.get({});
-                expect(res).to.eql(response);
+                expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/resourcequotas/')
             });
             it('should get all in namespace no args', async () => {
                 const res = await client.resourcequotas.get();
-                expect(res).to.eql(response);
+                expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/resourcequotas/')
             });
         });
         describe('Services', () => {
