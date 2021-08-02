@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+const clonedeep = require('lodash.clonedeep');
 const jobTemplate = require('./stubs/jobTemplate');
 const secretMock = require('./stubs/secret.json');
 const slimJobTemplate = require('./stubs/slim-job-template');
@@ -15,6 +16,67 @@ const configMapName = 'hkube-versions';
 
 
 describe('Utils', () => {
+    describe('ingress', () => {
+        it('should return correct ingress kind extensions/v1beta1', () => {
+            const ret = utils.getIngressKind({version: '1.13'});
+            expect(ret).to.eql('extensions/v1beta1')
+        });
+        it('should return correct ingress kind networking.k8s.io/v1beta1', () => {
+            const ret = utils.getIngressKind({version: '1.16'});
+            expect(ret).to.eql('networking.k8s.io/v1beta1')
+        });
+        it('should return correct ingress kind networking.k8s.io/v1', () => {
+            const ret = utils.getIngressKind({version: '1.20'});
+            expect(ret).to.eql('networking.k8s.io/v1')
+        });
+
+        it('should return correct backend networking.k8s.io/v1 number', () => {
+            const serviceName = 'service1';
+            const servicePort = 8080;
+            const ret = utils.getIngressBackend(serviceName, servicePort, {version: '1.20'});
+            expect(ret).to.eql({
+                service:{
+                    name: serviceName,
+                    port: {
+                        number: servicePort
+                    }
+                }
+            })
+        });
+        it('should return correct backend networking.k8s.io/v1 string', () => {
+            const serviceName = 'service1';
+            const servicePort = 'http';
+            const ret = utils.getIngressBackend(serviceName, servicePort, {version: '1.20'});
+            expect(ret).to.eql({
+                service:{
+                    name: serviceName,
+                    port: {
+                        name: servicePort
+                    }
+                }
+            })
+        });
+        it('should return correct backend networking.k8s.io/v1beta1', () => {
+            const serviceName = 'service1';
+            const servicePort = 8080;
+            const ret = utils.getIngressBackend(serviceName, servicePort, {version: '1.16'});
+            expect(ret).to.eql({serviceName, servicePort})
+        });
+        it('should return correct backend extensions/v1beta1', () => {
+            const serviceName = 'service1';
+            const servicePort = 8080;
+            const ret = utils.getIngressBackend(serviceName, servicePort, {version: '1.13'});
+            expect(ret).to.eql({serviceName, servicePort})
+        });
+        it('should return false shouldAddIngressPathType', () => {
+            const ret = utils.shouldAddIngressPathType({version: '1.13'});
+            expect(ret).to.be.false;
+        });
+        it('should return true correct shouldAddIngressPathType', () => {
+            const ret = utils.shouldAddIngressPathType({version: '1.20'});
+            expect(ret).to.be.true;
+        });
+    });
     describe('findContainer', () => {
         it('should throw unable to find container', async () => {
             const container = 'no_such';
@@ -216,6 +278,10 @@ describe('Utils', () => {
     });
 
     describe('applyImagePullSecret', () => {
+        it('should return original spec if no secret', () => {
+            const res = utils.applyImagePullSecret(slimJobTemplate,'');
+            expect(res).to.eql(slimJobTemplate)
+        });
         it('should set one secret', () => {
             const res = utils.applyImagePullSecret(slimJobTemplate,'my-secret');
             expect(res.spec.template.spec.imagePullSecrets).to.exist;
@@ -243,6 +309,10 @@ describe('Utils', () => {
             expect(res.metadata.annotations.ann1).to.eql('value1');
             expect(res.spec.template.metadata.annotations.ann1).to.eql('value1');
 
+        });
+        it('should return original spec if empty', () => {
+            const res = utils.applyAnnotation(slimJobTemplate, undefined);
+            expect(res).to.eql(slimJobTemplate)
         });
         it('should add to not empty metadata', () => {
             const res1 = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1' });
@@ -597,9 +667,15 @@ describe('Utils', () => {
         });
     });
     describe('applySecret', () => {
-        it('should add volumeMount to spec', () => {
+        it('should add secret to spec', () => {
             const res = utils.applySecret(slimJobTemplate, containerName, secretMock);
             expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(Object.keys(secretMock.data).length);
+        });
+        it('should add secret to spec with existing env', () => {
+            const spec = clonedeep(slimJobTemplate);
+            spec.spec.template.spec.containers[0].env=[{name: 'e1', value: 'v1'}]
+            const res = utils.applySecret(spec, containerName, secretMock);
+            expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(Object.keys(secretMock.data).length+1);
         });
     });
 });
