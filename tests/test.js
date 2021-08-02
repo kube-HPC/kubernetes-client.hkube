@@ -247,7 +247,14 @@ describe('KubernetesClient', () => {
         describe('Versions', () => {
             it('should get', async () => {
                 const res = await client.versions.get();
-                expect(res).to.eql(response);
+                expect(res.body.gitVersion).to.eql('v1.19.7');
+            });
+            it('should get parsed version', async () => {
+                const res = await client.versions.getParsedVersion();
+                expect(res.gitVersion).to.eql('v1.19.7');
+                expect(res.version).to.eql('1.19');
+                expect(res.minor).to.eql(19);
+                expect(res.major).to.eql(1);
             });
         });
     });

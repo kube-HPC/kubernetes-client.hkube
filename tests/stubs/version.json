@@ -1,0 +1,14 @@
+{
+    "statusCode": 200,
+    "body": {
+        "major": "1",
+        "minor": "19",
+        "gitVersion": "v1.19.7",
+        "gitCommit": "1dd5338295409edcfff11505e7bb246f0d325d15",
+        "gitTreeState": "clean",
+        "buildDate": "2021-01-13T13:15:20Z",
+        "goVersion": "go1.15.5",
+        "compiler": "gc",
+        "platform": "linux/amd64"
+    }
+}
