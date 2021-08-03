@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+
 const deploymentTemplate = require('./stubs/deploymentTemplate');
 const jobTemplate = require('./stubs/jobTemplate');
 const kubernetesServerMock = require('./mocks/kubernetes-server.mock');
@@ -44,7 +45,7 @@ describe('KubernetesClient', () => {
         client = global.testParams.client;
     });
     describe('Client', () => {
-        describe('Client', () => {
+        describe('Client v1.9', () => {
             it('should create new Client with isLocal:false', async () => {
                 const clientK8s = new Client();
                 await clientK8s.init({ isLocal: false, kubeconfig });
@@ -60,6 +61,38 @@ describe('KubernetesClient', () => {
                 expect(clientK8s).to.have.property('versions');
                 expect(clientK8s).to.have.property('resourcequotas');
                 expect(clientK8s).to.have.property('secrets');
+                const version = clientK8s.kubeVersion;
+                expect(version.version).to.eql('1.19')
+                expect(clientK8s.versions._version.version).to.eql('1.19')
+                expect(clientK8s.ingresses._version.version).to.eql('1.19')
+            });
+        });
+        describe('Client v1.22', () => {
+            before(()=>{
+                global.testParams.kubernetesServerMock.setVersion({major: '1', minor: '22'})  
+            })
+            after(()=>{
+                global.testParams.kubernetesServerMock.setVersion({major: '1', minor: '19'})  
+            })
+            it('should create new Client with isLocal:false', async () => {
+                const clientK8s = new Client();
+                await clientK8s.init({ isLocal: false, kubeconfig });
+                expect(clientK8s).to.have.property('configMaps');
+                expect(clientK8s).to.have.property('containers');
+                expect(clientK8s).to.have.property('deployments');
+                expect(clientK8s).to.have.property('ingresses');
+                expect(clientK8s).to.have.property('jobs');
+                expect(clientK8s).to.have.property('logs');
+                expect(clientK8s).to.have.property('nodes');
+                expect(clientK8s).to.have.property('pods');
+                expect(clientK8s).to.have.property('services');
+                expect(clientK8s).to.have.property('versions');
+                expect(clientK8s).to.have.property('resourcequotas');
+                expect(clientK8s).to.have.property('secrets');
+                const version = clientK8s.kubeVersion;
+                expect(version.version).to.eql('1.22')
+                expect(clientK8s.versions._version.version).to.eql('1.22')
+                expect(clientK8s.ingresses._version.version).to.eql('1.22')
             });
         });
         describe('ConfigMaps', () => {
@@ -80,6 +113,10 @@ describe('KubernetesClient', () => {
             it('should get status', async () => {
                 const containerStatus = await client.containers.getStatus({ podName, containerName });
                 expect(containerStatus).to.have.property('status');
+            });
+            it('should throw if containerName not found', async () => {
+                expect(client.containers.getStatus({ podName, containerName: 'no-container' })).to.eventually.throw
+                
             });
         });
         describe('Deployments', () => {

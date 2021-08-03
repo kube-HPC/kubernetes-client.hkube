@@ -1,3 +1,7 @@
+const chai = require('chai');
+const chaiAsPromised = require('chai-as-promised');
+chai.use(chaiAsPromised);
+
 const kubernetesServerMock = require('./mocks/kubernetes-server.mock');
 
 const kubeconfig = {
@@ -35,6 +39,7 @@ before(async () => {
     global.testParams = {
         utils,
         Client,
-        client
+        client,
+        kubernetesServerMock
     }
 });
