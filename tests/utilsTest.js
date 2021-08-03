@@ -18,63 +18,63 @@ const configMapName = 'hkube-versions';
 describe('Utils', () => {
     describe('ingress', () => {
         it('should return correct ingress kind extensions/v1beta1', () => {
-            const ret = utils.getIngressKind({version: '1.13'});
+            const ret = utils.getIngressApiVersion({ version: '1.13' });
             expect(ret).to.eql('extensions/v1beta1')
         });
         it('should return correct ingress kind networking.k8s.io/v1beta1', () => {
-            const ret = utils.getIngressKind({version: '1.16'});
+            const ret = utils.getIngressApiVersion({ version: '1.16' });
             expect(ret).to.eql('networking.k8s.io/v1beta1')
         });
         it('should return correct ingress kind networking.k8s.io/v1', () => {
-            const ret = utils.getIngressKind({version: '1.20'});
+            const ret = utils.getIngressApiVersion({ version: '1.20' });
             expect(ret).to.eql('networking.k8s.io/v1')
         });
 
         it('should return correct backend networking.k8s.io/v1 number', () => {
             const serviceName = 'service1';
             const servicePort = 8080;
-            const ret = utils.getIngressBackend(serviceName, servicePort, {version: '1.20'});
+            const ret = utils.getIngressBackend(serviceName, servicePort, { version: '1.20' });
             expect(ret).to.eql({
-                service:{
-                    name: serviceName,
-                    port: {
-                        number: servicePort
+                backend: {
+                    service: {
+                        name: serviceName,
+                        port: {
+                            number: servicePort
+                        }
                     }
-                }
+                },
+                pathType: 'ImplementationSpecific'
             })
         });
         it('should return correct backend networking.k8s.io/v1 string', () => {
             const serviceName = 'service1';
             const servicePort = 'http';
-            const ret = utils.getIngressBackend(serviceName, servicePort, {version: '1.20'});
+            const ret = utils.getIngressBackend(serviceName, servicePort, { version: '1.20' });
             expect(ret).to.eql({
-                service:{
-                    name: serviceName,
-                    port: {
-                        name: servicePort
+                backend: {
+                    service: {
+                        name: serviceName,
+                        port: {
+                            name: servicePort
+                        }
                     }
-                }
+                },
+                pathType: 'ImplementationSpecific'
             })
         });
         it('should return correct backend networking.k8s.io/v1beta1', () => {
             const serviceName = 'service1';
             const servicePort = 8080;
-            const ret = utils.getIngressBackend(serviceName, servicePort, {version: '1.16'});
-            expect(ret).to.eql({serviceName, servicePort})
+            const ret = utils.getIngressBackend(serviceName, servicePort, { version: '1.16' });
+            expect(ret.backend).to.eql({ serviceName, servicePort })
+            expect(ret.pathType).to.not.exist;
         });
         it('should return correct backend extensions/v1beta1', () => {
             const serviceName = 'service1';
             const servicePort = 8080;
-            const ret = utils.getIngressBackend(serviceName, servicePort, {version: '1.13'});
-            expect(ret).to.eql({serviceName, servicePort})
-        });
-        it('should return false shouldAddIngressPathType', () => {
-            const ret = utils.shouldAddIngressPathType({version: '1.13'});
-            expect(ret).to.be.false;
-        });
-        it('should return true correct shouldAddIngressPathType', () => {
-            const ret = utils.shouldAddIngressPathType({version: '1.20'});
-            expect(ret).to.be.true;
+            const ret = utils.getIngressBackend(serviceName, servicePort, { version: '1.13' });
+            expect(ret.backend).to.eql({ serviceName, servicePort })
+            expect(ret.pathType).to.not.exist;
         });
     });
     describe('findContainer', () => {
@@ -151,7 +151,7 @@ describe('Utils', () => {
             expect(res).to.have.property('tag');
             expect(res).to.have.property('name');
             expect(res).to.have.property('fullname');
-            
+
             expect(res.registry).to.equal('hostname.com');
             expect(res.namespace).to.equal('docker-virtual/foo/foo');
             expect(res.repository).to.equal('algorithm-queue');
@@ -227,7 +227,7 @@ describe('Utils', () => {
             const container = 'worker';
             const configMapRes = await client.configMaps.get({ name: configMapName });
             const configMap = client.configMaps.extractConfigMap(configMapRes);
-            configMap.versions.versions.find(v=>v.project===container).image='foo/worker2'
+            configMap.versions.versions.find(v => v.project === container).image = 'foo/worker2'
             const res = utils.createImageFromContainer(slimJobTemplate, container, configMap.versions, { registry: configMap.registry });
             expect(res).to.equal('cloud.docker.com/foo/worker2:v2.1.0');
         });
@@ -279,27 +279,27 @@ describe('Utils', () => {
 
     describe('applyImagePullSecret', () => {
         it('should return original spec if no secret', () => {
-            const res = utils.applyImagePullSecret(slimJobTemplate,'');
+            const res = utils.applyImagePullSecret(slimJobTemplate, '');
             expect(res).to.eql(slimJobTemplate)
         });
         it('should set one secret', () => {
-            const res = utils.applyImagePullSecret(slimJobTemplate,'my-secret');
+            const res = utils.applyImagePullSecret(slimJobTemplate, 'my-secret');
             expect(res.spec.template.spec.imagePullSecrets).to.exist;
-            expect(res.spec.template.spec.imagePullSecrets[0]).to.eql({name: 'my-secret'});
+            expect(res.spec.template.spec.imagePullSecrets[0]).to.eql({ name: 'my-secret' });
         });
         it('should add two secrets', () => {
-            let res = utils.applyImagePullSecret(slimJobTemplate,'my-secret');
-            res = utils.applyImagePullSecret(res,'my-secret2');
+            let res = utils.applyImagePullSecret(slimJobTemplate, 'my-secret');
+            res = utils.applyImagePullSecret(res, 'my-secret2');
             expect(res.spec.template.spec.imagePullSecrets).to.exist;
-            expect(res.spec.template.spec.imagePullSecrets[0]).to.eql({name: 'my-secret'});
-            expect(res.spec.template.spec.imagePullSecrets[1]).to.eql({name: 'my-secret2'});
+            expect(res.spec.template.spec.imagePullSecrets[0]).to.eql({ name: 'my-secret' });
+            expect(res.spec.template.spec.imagePullSecrets[1]).to.eql({ name: 'my-secret2' });
         });
         it('should not duplicate', () => {
-            let res = utils.applyImagePullSecret(slimJobTemplate,'my-secret');
-            res = utils.applyImagePullSecret(res,'my-secret');
+            let res = utils.applyImagePullSecret(slimJobTemplate, 'my-secret');
+            res = utils.applyImagePullSecret(res, 'my-secret');
             expect(res.spec.template.spec.imagePullSecrets).to.exist;
             expect(res.spec.template.spec.imagePullSecrets).to.have.lengthOf(1);
-            expect(res.spec.template.spec.imagePullSecrets[0]).to.eql({name: 'my-secret'});
+            expect(res.spec.template.spec.imagePullSecrets[0]).to.eql({ name: 'my-secret' });
         });
     });
     describe('applyAnnotations', () => {
@@ -325,7 +325,7 @@ describe('Utils', () => {
 
         });
         it('should add multiple keys', () => {
-            const res2 = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1' , ann2: 'value2' });
+            const res2 = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1', ann2: 'value2' });
             expect(res2.metadata.annotations).to.exist;
             expect(res2.metadata.annotations.ann1).to.eql('value1');
             expect(res2.metadata.annotations.ann2).to.eql('value2');
@@ -333,7 +333,7 @@ describe('Utils', () => {
 
         });
         it('should delete annotation', () => {
-            const res1 = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1' , ann2: 'value2' });
+            const res1 = utils.applyAnnotation(slimJobTemplate, { ann1: 'value1', ann2: 'value2' });
             expect(res1.metadata.annotations.ann1).to.eql('value1');
             const res2 = utils.applyAnnotation(res1, { ann2: null });
             expect(res2.metadata.annotations).to.exist;
@@ -673,9 +673,9 @@ describe('Utils', () => {
         });
         it('should add secret to spec with existing env', () => {
             const spec = clonedeep(slimJobTemplate);
-            spec.spec.template.spec.containers[0].env=[{name: 'e1', value: 'v1'}]
+            spec.spec.template.spec.containers[0].env = [{ name: 'e1', value: 'v1' }]
             const res = utils.applySecret(spec, containerName, secretMock);
-            expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(Object.keys(secretMock.data).length+1);
+            expect(res.spec.template.spec.containers[0].env).to.have.lengthOf(Object.keys(secretMock.data).length + 1);
         });
     });
 });
