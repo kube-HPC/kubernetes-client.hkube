@@ -28,8 +28,9 @@ before(async () => {
     const index = require('../index');
     Client = index.Client;
     utils = index.utils;
-    client = new Client({ isLocal: false, timeout: 5000, kubeconfig });
+    client = new Client();
     await kubernetesServerMock.start({ port: 9001 });
+    await client.init({ isLocal: false, timeout: 5000, kubeconfig })
 
     global.testParams = {
         utils,

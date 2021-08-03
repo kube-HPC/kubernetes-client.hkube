@@ -46,7 +46,8 @@ describe('KubernetesClient', () => {
     describe('Client', () => {
         describe('Client', () => {
             it('should create new Client with isLocal:false', async () => {
-                const clientK8s = new Client({ isLocal: false, kubeconfig });
+                const clientK8s = new Client();
+                await clientK8s.init({ isLocal: false, kubeconfig });
                 expect(clientK8s).to.have.property('configMaps');
                 expect(clientK8s).to.have.property('containers');
                 expect(clientK8s).to.have.property('deployments');
