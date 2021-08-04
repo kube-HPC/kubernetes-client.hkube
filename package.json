@@ -1,6 +1,6 @@
 {
   "name": "@hkube/kubernetes-client",
-  "version": "1.0.36",
+  "version": "2.0.0",
   "description": "hkube kubernetes-client",
   "main": "index.js",
   "scripts": {
@@ -31,6 +31,8 @@
   "devDependencies": {
     "body-parser": "^1.18.3",
     "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "chai-subset": "^1.6.0",
     "coveralls": "^3.0.3",
     "eslint": "^5.16.0",
     "eslint-config-airbnb-base": "^13.1.0",

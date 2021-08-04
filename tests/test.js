@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+
 const deploymentTemplate = require('./stubs/deploymentTemplate');
 const jobTemplate = require('./stubs/jobTemplate');
 const kubernetesServerMock = require('./mocks/kubernetes-server.mock');
@@ -12,6 +13,7 @@ const secretName = 'worker';
 const configMapName = 'hkube-versions';
 
 let client, Client, utils;
+let client_v1_22;
 const response = { statusCode: 200, body: { status: 'ok' } };
 
 const kubeconfig = {
@@ -44,9 +46,10 @@ describe('KubernetesClient', () => {
         client = global.testParams.client;
     });
     describe('Client', () => {
-        describe('Client', () => {
+        describe('Client v1.9', () => {
             it('should create new Client with isLocal:false', async () => {
-                const clientK8s = new Client({ isLocal: false, kubeconfig });
+                const clientK8s = new Client();
+                await clientK8s.init({ isLocal: false, kubeconfig });
                 expect(clientK8s).to.have.property('configMaps');
                 expect(clientK8s).to.have.property('containers');
                 expect(clientK8s).to.have.property('deployments');
@@ -59,6 +62,38 @@ describe('KubernetesClient', () => {
                 expect(clientK8s).to.have.property('versions');
                 expect(clientK8s).to.have.property('resourcequotas');
                 expect(clientK8s).to.have.property('secrets');
+                const version = clientK8s.kubeVersion;
+                expect(version.version).to.eql('1.19')
+                expect(clientK8s.versions._version.version).to.eql('1.19')
+                expect(clientK8s.ingresses._version.version).to.eql('1.19')
+            });
+        });
+        describe('Client v1.22', () => {
+            before(() => {
+                global.testParams.kubernetesServerMock.setVersion({ major: '1', minor: '22' })
+            })
+            after(() => {
+                global.testParams.kubernetesServerMock.setVersion({ major: '1', minor: '19' })
+            })
+            it('should create new Client with isLocal:false', async () => {
+                const clientK8s = new Client();
+                await clientK8s.init({ isLocal: false, kubeconfig });
+                expect(clientK8s).to.have.property('configMaps');
+                expect(clientK8s).to.have.property('containers');
+                expect(clientK8s).to.have.property('deployments');
+                expect(clientK8s).to.have.property('ingresses');
+                expect(clientK8s).to.have.property('jobs');
+                expect(clientK8s).to.have.property('logs');
+                expect(clientK8s).to.have.property('nodes');
+                expect(clientK8s).to.have.property('pods');
+                expect(clientK8s).to.have.property('services');
+                expect(clientK8s).to.have.property('versions');
+                expect(clientK8s).to.have.property('resourcequotas');
+                expect(clientK8s).to.have.property('secrets');
+                const version = clientK8s.kubeVersion;
+                expect(version.version).to.eql('1.22')
+                expect(clientK8s.versions._version.version).to.eql('1.22')
+                expect(clientK8s.ingresses._version.version).to.eql('1.22')
             });
         });
         describe('ConfigMaps', () => {
@@ -66,6 +101,7 @@ describe('KubernetesClient', () => {
                 const configMapRes = await client.configMaps.get({ name: configMapName });
                 expect(configMapRes).to.have.property('body');
                 expect(configMapRes).to.have.property('statusCode');
+                expect(configMapRes.body.path).to.include('api/v1');
             });
             it('should extractConfigMap', async () => {
                 const configMapRes = await client.configMaps.get({ name: configMapName });
@@ -80,89 +116,125 @@ describe('KubernetesClient', () => {
                 const containerStatus = await client.containers.getStatus({ podName, containerName });
                 expect(containerStatus).to.have.property('status');
             });
+            it('should throw if containerName not found', async () => {
+                expect(client.containers.getStatus({ podName, containerName: 'no-container' })).to.eventually.throw
+
+            });
         });
         describe('Deployments', () => {
             it('should get', async () => {
                 const res = await client.deployments.get({ labelSelector });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.include('apis/apps/v1');
             });
             it('should create', async () => {
                 const res = await client.deployments.create({ spec: deploymentTemplate });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
             it('should update', async () => {
                 const res = await client.deployments.update({ deploymentName, spec: deploymentTemplate });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
             it('should delete', async () => {
                 const res = await client.deployments.delete({ deploymentName });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
         });
         describe('Ingresses', () => {
             it('should get', async () => {
                 const res = await client.ingresses.get({ labelSelector });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.eql('/api/kube/apis/extensions/v1beta1/namespaces/default/ingresses/');
             });
             it('should create', async () => {
                 const res = await client.ingresses.create({ spec: deploymentTemplate });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.eql('/api/kube/apis/extensions/v1beta1/namespaces/default/ingresses');
             });
             it('should update', async () => {
                 const res = await client.ingresses.update({ deploymentName, spec: deploymentTemplate });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.eql('/api/kube/apis/extensions/v1beta1/namespaces/default/ingresses/');
             });
             it('should delete', async () => {
                 const res = await client.ingresses.delete({ deploymentName });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.eql('/api/kube/apis/extensions/v1beta1/namespaces/default/ingresses/');
+            });
+        });
+
+        describe('Ingresses v1.22', () => {
+            before(async () => {
+                global.testParams.kubernetesServerMock.setVersion({ major: '1', minor: '22' })
+                client_v1_22 = new Client();
+                await client_v1_22.init({ isLocal: false, kubeconfig });
+            });
+            after(() => {
+                global.testParams.kubernetesServerMock.setVersion({ major: '1', minor: '19' })
+            });
+            it('should get', async () => {
+                const res = await client_v1_22.ingresses.get({ labelSelector });
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.eql('/api/kube/apis/networking.k8s.io/v1/namespaces/default/ingresses/');
+            });
+            it('should create', async () => {
+                const res = await client_v1_22.ingresses.create({ spec: deploymentTemplate });
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.eql('/api/kube/apis/networking.k8s.io/v1/namespaces/default/ingresses');
+            });
+            it('should update', async () => {
+                const res = await client_v1_22.ingresses.update({ deploymentName, spec: deploymentTemplate });
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.eql('/api/kube/apis/networking.k8s.io/v1/namespaces/default/ingresses/');
+            });
+            it('should delete', async () => {
+                const res = await client_v1_22.ingresses.delete({ deploymentName });
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.eql('/api/kube/apis/networking.k8s.io/v1/namespaces/default/ingresses/');
             });
         });
         describe('Jobs', () => {
             it('should get', async () => {
                 const res = await client.jobs.get({ labelSelector });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.include('apis/batch/v1');
             });
             it('should create', async () => {
                 const res = await client.jobs.create({ spec: jobTemplate });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
             it('should update', async () => {
                 const res = await client.jobs.update({ jobName, spec: jobTemplate });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
             it('should delete', async () => {
                 const res = await client.jobs.delete({ jobName });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
         });
         describe('Logs', () => {
             it('should get', async () => {
                 const res = await client.logs.get({ podName, containerName });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.include('api/v1/');
             });
         });
         describe('Nodes', () => {
             it('should get', async () => {
                 const res = await client.nodes.get({ labelSelector });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
             it('should get all', async () => {
                 const res = await client.nodes.all();
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
         });
         describe('Pods', () => {
-            before(() => {
-                kubernetesServerMock.addPath=true;
-            });
-            after(() => {
-                kubernetesServerMock.addPath=false;
-            });
             it('should get', async () => {
                 const res = await client.pods.get({ podName, labelSelector });
                 expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/pods/worker')
                 expect(res).to.have.property('statusCode');
-                expect(res).to.have.property('body');                
+                expect(res).to.have.property('body');
             });
             it('should get all', async () => {
                 const res = await client.pods.get({ useNamespace: false });
@@ -194,12 +266,6 @@ describe('KubernetesClient', () => {
             });
         });
         describe('ResourceQuotas', () => {
-            before(() => {
-                kubernetesServerMock.addPath=true;
-            });
-            after(() => {
-                kubernetesServerMock.addPath=false;
-            });
             it('should get', async () => {
                 const res = await client.resourcequotas.get({ name: 'foo', labelSelector });
                 expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/resourcequotas/foo')
@@ -220,25 +286,27 @@ describe('KubernetesClient', () => {
         describe('Services', () => {
             it('should get', async () => {
                 const res = await client.services.get({ labelSelector });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.include('api/v1');
             });
             it('should create', async () => {
                 const res = await client.services.create({ spec: deploymentTemplate });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
             it('should update', async () => {
                 const res = await client.services.update({ deploymentName, spec: deploymentTemplate });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
             it('should delete', async () => {
                 const res = await client.services.delete({ deploymentName });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
             });
         });
         describe('Secrets', () => {
             it('should get', async () => {
                 const res = await client.secrets.get({ secretName });
-                expect(res).to.eql(response);
+                expect(res).to.containSubset(response);
+                expect(res.body.path).to.include('api/v1');
             });
         });
         describe('Versions', () => {
