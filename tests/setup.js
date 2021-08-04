@@ -1,7 +1,8 @@
 const chai = require('chai');
 const chaiAsPromised = require('chai-as-promised');
 chai.use(chaiAsPromised);
-
+chaiSubset = require('chai-subset');
+chai.use(chaiSubset);
 const kubernetesServerMock = require('./mocks/kubernetes-server.mock');
 
 const kubeconfig = {
