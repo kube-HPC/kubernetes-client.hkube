@@ -23,17 +23,40 @@ describe('Utils', () => {
         });
         it('should return correct ingress kind networking.k8s.io/v1beta1', () => {
             const ret = utils.getIngressApiVersion({ version: '1.16' });
-            expect(ret).to.eql('networking.k8s.io/v1beta1')
+            expect(ret).to.eql('extensions/v1beta1')
         });
         it('should return correct ingress kind networking.k8s.io/v1', () => {
-            const ret = utils.getIngressApiVersion({ version: '1.20' });
+            const ret = utils.getIngressApiVersion({ version: '1.19' });
+            expect(ret).to.eql('extensions/v1beta1')
+        });
+        it('should return correct ingress kind networking.k8s.io/v1', () => {
+            const ret = utils.getIngressApiVersion({ version: '1.21' });
+            expect(ret).to.eql('networking.k8s.io/v1')
+        }); 
+        it('should return correct ingress kind networking.k8s.io/v1', () => {
+            const ret = utils.getIngressApiVersion({ version: '1.22' });
             expect(ret).to.eql('networking.k8s.io/v1')
         });
-
         it('should return correct backend networking.k8s.io/v1 number', () => {
             const serviceName = 'service1';
             const servicePort = 8080;
-            const ret = utils.getIngressBackend(serviceName, servicePort, { version: '1.20' });
+            const ret = utils.getIngressBackend(serviceName, servicePort, { version: '1.22' });
+            expect(ret).to.eql({
+                backend: {
+                    service: {
+                        name: serviceName,
+                        port: {
+                            number: servicePort
+                        }
+                    }
+                },
+                pathType: 'ImplementationSpecific'
+            })
+        });
+        it('should return correct backend networking.k8s.io/v1 number', () => {
+            const serviceName = 'service1';
+            const servicePort = 8080;
+            const ret = utils.getIngressBackend(serviceName, servicePort, { version: '1.21' });
             expect(ret).to.eql({
                 backend: {
                     service: {
@@ -49,7 +72,7 @@ describe('Utils', () => {
         it('should return correct backend networking.k8s.io/v1 string', () => {
             const serviceName = 'service1';
             const servicePort = 'http';
-            const ret = utils.getIngressBackend(serviceName, servicePort, { version: '1.20' });
+            const ret = utils.getIngressBackend(serviceName, servicePort, { version: '1.22' });
             expect(ret).to.eql({
                 backend: {
                     service: {
@@ -62,7 +85,7 @@ describe('Utils', () => {
                 pathType: 'ImplementationSpecific'
             })
         });
-        it('should return correct backend networking.k8s.io/v1beta1', () => {
+        it('should return correct backend extensions/v1beta1', () => {
             const serviceName = 'service1';
             const servicePort = 8080;
             const ret = utils.getIngressBackend(serviceName, servicePort, { version: '1.16' });
