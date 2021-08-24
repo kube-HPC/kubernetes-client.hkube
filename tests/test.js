@@ -11,7 +11,7 @@ const podName = 'worker';
 const containerName = 'worker';
 const secretName = 'worker';
 const configMapName = 'hkube-versions';
-
+const sidecarName = 'my-sidecar'
 let client, Client, utils;
 let client_v1_22;
 const response = { statusCode: 200, body: { status: 'ok' } };
@@ -307,6 +307,20 @@ describe('KubernetesClient', () => {
                 const res = await client.secrets.get({ secretName });
                 expect(res).to.containSubset(response);
                 expect(res.body.path).to.include('api/v1');
+            });
+        });
+        describe('Sidecars', () => {
+            it('should get', async () => {
+                const res = await client.sidecars.get({ name: sidecarName });
+                expect(res.container).to.have.lengthOf(1);
+                expect(res.container[0]).to.deep.include({name: 'my-sidecar-container'});
+                expect(res.volumes).to.have.lengthOf(2);
+                expect(res.volumeMounts).to.have.lengthOf(1);
+
+            });
+            it('should return null if not found', async () => {
+                const res = await client.sidecars.get({ name: 'no-such' });
+                expect(res).to.not.exist;
             });
         });
         describe('Versions', () => {
