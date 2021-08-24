@@ -1,6 +1,6 @@
 {
   "name": "@hkube/kubernetes-client",
-  "version": "2.0.3",
+  "version": "2.0.4",
   "description": "hkube kubernetes-client",
   "main": "index.js",
   "scripts": {
