@@ -12,6 +12,7 @@ const containerName = 'worker';
 const secretName = 'worker';
 const configMapName = 'hkube-versions';
 const sidecarName = 'my-sidecar'
+
 let client, Client, utils;
 let client_v1_22;
 const response = { statusCode: 200, body: { status: 'ok' } };
@@ -262,6 +263,42 @@ describe('KubernetesClient', () => {
             });
             it('should delete', async () => {
                 const res = await client.pods.delete({ podName });
+                expect(res.statusCode).to.eql(200);
+            });
+        });
+        describe.only('PVC', () => {
+            it('should get', async () => {
+                const res = await client.pvc.get({ name: 'mypvc', labelSelector });
+                expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/persistentvolumeclaims/mypvc')
+                expect(res).to.have.property('statusCode');
+                expect(res).to.have.property('body');
+            });
+            it('should get all', async () => {
+                const res = await client.pvc.get({ useNamespace: false });
+                expect(res.body.path).to.eql('/api/kube/api/v1/persistentvolumeclaims')
+                expect(res).to.have.property('statusCode');
+                expect(res).to.have.property('body');
+            });
+            it('should get all in namespace', async () => {
+                const res = await client.pvc.get();
+                expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/persistentvolumeclaims/')
+                expect(res).to.have.property('statusCode');
+                expect(res).to.have.property('body');
+            });
+            it('should get all backward compatibility', async () => {
+                const res = await client.pvc.all();
+                expect(res.body.path).to.eql('/api/kube/api/v1/persistentvolumeclaims')
+                expect(res).to.have.property('statusCode');
+                expect(res).to.have.property('body');
+            });
+            it('should get all in namespace backward compatibility', async () => {
+                const res = await client.pvc.all(true);
+                expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/persistentvolumeclaims/')
+                expect(res).to.have.property('statusCode');
+                expect(res).to.have.property('body');
+            });
+            it('should delete', async () => {
+                const res = await client.pvc.delete({ name: 'mypvc' });
                 expect(res.statusCode).to.eql(200);
             });
         });
