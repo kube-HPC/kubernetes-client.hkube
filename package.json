@@ -39,7 +39,7 @@
     "eslint-plugin-chai-friendly": "^0.7.2",
     "eslint-plugin-import": "^2.24.1",
     "express": "^4.16.4",
-    "mocha": "^6.0.2",
+    "mocha": "^10.2.0",
     "nyc": "^13.3.0",
     "pre-commit": "^1.2.2",
     "sinon": "^7.3.1"
