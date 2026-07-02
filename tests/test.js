@@ -118,8 +118,7 @@ describe('KubernetesClient', () => {
                 expect(containerStatus).to.have.property('status');
             });
             it('should throw if containerName not found', async () => {
-                expect(client.containers.getStatus({ podName, containerName: 'no-container' })).to.eventually.throw
-
+                await expect(client.containers.getStatus({ podName, containerName: 'no-container' })).to.be.rejectedWith('unable to find container no-container');
             });
         });
         describe('Deployments', () => {
@@ -266,7 +265,7 @@ describe('KubernetesClient', () => {
                 expect(res.statusCode).to.eql(200);
             });
         });
-        describe.only('PVC', () => {
+        describe('PVC', () => {
             it('should get', async () => {
                 const res = await client.pvc.get({ name: 'mypvc', labelSelector });
                 expect(res.body.path).to.eql('/api/kube/api/v1/namespaces/default/persistentvolumeclaims/mypvc')
@@ -374,6 +373,48 @@ describe('KubernetesClient', () => {
                 const resCached = await client.versions.getParsedVersion();
                 expect(res).to.eql(resCached);
             });
+        });
+    });
+    describe('withResilience', () => {
+        it('should passthrough and return value when no resilience configured', async () => {
+            const c = new Client();
+            const res = await c.withResilience(async () => 'ok', 'test');
+            expect(res).to.eql('ok');
+        });
+        it('should reject with timeout when fn exceeds timeoutMs', async () => {
+            const c = new Client();
+            c._resilience = { timeoutMs: 20 };
+            await expect(c.withResilience(() => new Promise(() => { }), 'slow'))
+                .to.be.rejectedWith('slow timeout after 20ms');
+        });
+        it('should retry on failure and resolve, invoking onRetry', async () => {
+            const c = new Client();
+            const retries = [];
+            c._resilience = { retryLimit: 3, onRetry: (info) => retries.push(info) };
+            let calls = 0;
+            const res = await c.withResilience(async () => {
+                calls += 1;
+                if (calls < 2) {
+                    throw new Error('boom');
+                }
+                return 'recovered';
+            }, 'flaky');
+            expect(res).to.eql('recovered');
+            expect(calls).to.eql(2);
+            expect(retries).to.have.lengthOf(1);
+            expect(retries[0]).to.containSubset({ label: 'flaky', attempt: 1 });
+        });
+        it('should throw last error after exhausting retries, invoking onError', async () => {
+            const c = new Client();
+            let errorInfo;
+            c._resilience = { retryLimit: 2, onError: (info) => { errorInfo = info; } };
+            let calls = 0;
+            await expect(c.withResilience(async () => {
+                calls += 1;
+                throw new Error('always');
+            }, 'broken')).to.be.rejectedWith('always');
+            expect(calls).to.eql(2);
+            expect(errorInfo).to.containSubset({ label: 'broken', attempts: 2 });
         });
     });
 });
