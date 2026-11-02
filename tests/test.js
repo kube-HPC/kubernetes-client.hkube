@@ -1,4 +1,5 @@
 const { expect } = require('chai');
+const sinon = require('sinon');
 
 const deploymentTemplate = require('./stubs/deploymentTemplate');
 const jobTemplate = require('./stubs/jobTemplate');
@@ -376,6 +377,25 @@ describe('KubernetesClient', () => {
         });
     });
     describe('withResilience', () => {
+        const httpError = (statusCode) => {
+            const error = new Error(`status ${statusCode}`);
+            error.code = statusCode;
+            error.statusCode = statusCode;
+            return error;
+        };
+        const networkError = (code) => {
+            const error = new Error(code);
+            error.code = code;
+            return error;
+        };
+        const spyTimeoutTimers = (timeoutMs) => {
+            const spy = sinon.spy(global, 'setTimeout');
+            return {
+                timers: () => spy.getCalls().filter(call => call.args[1] === timeoutMs).map(call => call.returnValue),
+                restore: () => spy.restore()
+            };
+        };
+
         it('should passthrough and return value when no resilience configured', async () => {
             const c = new Client();
             const res = await c.withResilience(async () => 'ok', 'test');
@@ -387,15 +407,34 @@ describe('KubernetesClient', () => {
             await expect(c.withResilience(() => new Promise(() => { }), 'slow'))
                 .to.be.rejectedWith('slow timeout after 20ms');
         });
-        it('should retry on failure and resolve, invoking onRetry', async () => {
+        it('should clear the timeout timer when the call resolves', async () => {
+            const c = new Client();
+            c._resilience = { timeoutMs: 60000 };
+            const spy = spyTimeoutTimers(60000);
+            const res = await c.withResilience(async () => 'ok', 'fast');
+            spy.restore();
+            expect(res).to.eql('ok');
+            expect(spy.timers()).to.have.lengthOf(1);
+            expect(spy.timers()[0]._destroyed).to.eql(true);
+        });
+        it('should clear the timeout timer when the call rejects', async () => {
+            const c = new Client();
+            c._resilience = { timeoutMs: 60000 };
+            const spy = spyTimeoutTimers(60000);
+            await expect(c.withResilience(async () => { throw httpError(404); }, 'fail')).to.be.rejectedWith('status 404');
+            spy.restore();
+            expect(spy.timers()).to.have.lengthOf(1);
+            expect(spy.timers()[0]._destroyed).to.eql(true);
+        });
+        it('should retry on transient error and resolve, invoking onRetry', async () => {
             const c = new Client();
             const retries = [];
-            c._resilience = { retryLimit: 3, onRetry: (info) => retries.push(info) };
+            c._resilience = { retryLimit: 3, retryDelayMs: 1, onRetry: (info) => retries.push(info) };
             let calls = 0;
             const res = await c.withResilience(async () => {
                 calls += 1;
                 if (calls < 2) {
-                    throw new Error('boom');
+                    throw httpError(503);
                 }
                 return 'recovered';
             }, 'flaky');
@@ -407,14 +446,97 @@ describe('KubernetesClient', () => {
         it('should throw last error after exhausting retries, invoking onError', async () => {
             const c = new Client();
             let errorInfo;
-            c._resilience = { retryLimit: 2, onError: (info) => { errorInfo = info; } };
+            c._resilience = { retryLimit: 2, retryDelayMs: 1, onError: (info) => { errorInfo = info; } };
             let calls = 0;
             await expect(c.withResilience(async () => {
                 calls += 1;
-                throw new Error('always');
-            }, 'broken')).to.be.rejectedWith('always');
+                throw networkError('ECONNRESET');
+            }, 'broken')).to.be.rejectedWith('ECONNRESET');
             expect(calls).to.eql(2);
             expect(errorInfo).to.containSubset({ label: 'broken', attempts: 2 });
+        });
+        [429, 500, 503].forEach((statusCode) => {
+            it(`should retry on http ${statusCode}`, async () => {
+                const c = new Client();
+                c._resilience = { retryLimit: 2, retryDelayMs: 1 };
+                let calls = 0;
+                await expect(c.withResilience(async () => {
+                    calls += 1;
+                    throw httpError(statusCode);
+                }, 'http')).to.be.rejected;
+                expect(calls).to.eql(2);
+            });
+        });
+        [400, 401, 403, 404, 409, 422].forEach((statusCode) => {
+            it(`should not retry on http ${statusCode}`, async () => {
+                const c = new Client();
+                let errorInfo;
+                c._resilience = { retryLimit: 3, retryDelayMs: 1, onError: (info) => { errorInfo = info; } };
+                let calls = 0;
+                await expect(c.withResilience(async () => {
+                    calls += 1;
+                    throw httpError(statusCode);
+                }, 'http')).to.be.rejectedWith(`status ${statusCode}`);
+                expect(calls).to.eql(1);
+                expect(errorInfo).to.containSubset({ label: 'http', attempts: 1 });
+            });
+        });
+        ['ECONNRESET', 'ECONNREFUSED', 'ETIMEDOUT', 'ESOCKETTIMEDOUT', 'EAI_AGAIN'].forEach((code) => {
+            it(`should retry on network error ${code}`, async () => {
+                const c = new Client();
+                c._resilience = { retryLimit: 2, retryDelayMs: 1 };
+                let calls = 0;
+                await expect(c.withResilience(async () => {
+                    calls += 1;
+                    throw networkError(code);
+                }, 'net')).to.be.rejectedWith(code);
+                expect(calls).to.eql(2);
+            });
+        });
+        it('should not retry on unknown error', async () => {
+            const c = new Client();
+            c._resilience = { retryLimit: 3, retryDelayMs: 1 };
+            let calls = 0;
+            await expect(c.withResilience(async () => {
+                calls += 1;
+                throw new Error('bug');
+            }, 'unknown')).to.be.rejectedWith('bug');
+            expect(calls).to.eql(1);
+        });
+        it('should retry on own timeout', async () => {
+            const c = new Client();
+            c._resilience = { timeoutMs: 20, retryLimit: 2, retryDelayMs: 1 };
+            let calls = 0;
+            await expect(c.withResilience(() => {
+                calls += 1;
+                return new Promise(() => { });
+            }, 'slow')).to.be.rejectedWith('slow timeout after 20ms');
+            expect(calls).to.eql(2);
+        });
+        it('should wait with backoff before retry', async () => {
+            const c = new Client();
+            const delays = [];
+            c._resilience = { retryLimit: 3, retryDelayMs: 40, retryMaxDelayMs: 1000, onRetry: ({ delayMs }) => delays.push(delayMs) };
+            const callTimes = [];
+            await expect(c.withResilience(async () => {
+                callTimes.push(Date.now());
+                throw httpError(503);
+            }, 'backoff')).to.be.rejected;
+            expect(callTimes).to.have.lengthOf(3);
+            expect(delays[0]).to.be.within(20, 40);
+            expect(delays[1]).to.be.within(40, 80);
+            expect(callTimes[1] - callTimes[0]).to.be.at.least(delays[0] - 2);
+            expect(callTimes[2] - callTimes[1]).to.be.at.least(delays[1] - 2);
+        });
+        it('should use custom isRetryable', async () => {
+            const c = new Client();
+            c._resilience = { retryLimit: 2, retryDelayMs: 1, isRetryable: () => true };
+            let calls = 0;
+            await expect(c.withResilience(async () => {
+                calls += 1;
+                throw httpError(404);
+            }, 'custom')).to.be.rejected;
+            expect(calls).to.eql(2);
         });
     });
 });
